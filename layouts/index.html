@@ -1,18 +1,34 @@
 {{ define "main" }}
 <div class="container mx-auto px-4 py-8">
 
-    <!-- BAGIAN 1: HEADLINE UTAMA (1 Artikel Terbaru) -->
-    {{ range first 1 .Site.RegularPages }}
+    <!-- ====================================================================== -->
+    <!-- FILTER LOGIC: HANYA TAMPILKAN BERITA (ARTIKEL) -->
+    <!-- ====================================================================== -->
+    <!-- 
+       Kita membuat variabel $news yang berisi HANYA halaman dari section "articles".
+       Ini otomatis membuang halaman statis (About, Contact, dll) yang tidak berada 
+       di dalam folder content/articles.
+    -->
+    {{ $news := where .Site.RegularPages "Section" "articles" }}
+
+    
+    <!-- BAGIAN 1: HEADLINE UTAMA (1 Artikel Terbaru dari $news) -->
+    {{ range first 1 $news }}
     <section class="mb-12">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <!-- Gambar Besar -->
             <div class="lg:col-span-2 group relative overflow-hidden rounded-xl shadow-lg">
                 <a href="{{ .Permalink }}">
+                    <!-- Menggunakan Featured Image -->
                     <img src="{{ .Params.featured_image }}" alt="{{ .Title }}" class="w-full h-[400px] object-cover transition-transform duration-700 group-hover:scale-105">
+                    
+                    <!-- Overlay Gradient -->
                     <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
+                    
+                    <!-- Text Overlay -->
                     <div class="absolute bottom-0 left-0 p-6 text-white w-full">
                         <div class="flex items-center gap-2 mb-3">
-                            <!-- SAFETY CHECK KATEGORI -->
+                            <!-- Category Badge -->
                             {{ if .Params.categories }}
                             <span class="bg-red-600 text-white px-2 py-1 text-[10px] font-black uppercase tracking-widest rounded-sm">
                                 {{ index .Params.categories 0 }}
@@ -33,15 +49,15 @@
                 </a>
             </div>
 
-            <!-- List Berita Samping (4 Artikel Berikutnya) -->
+            <!-- List Berita Samping (4 Artikel Berikutnya dari $news) -->
             <div class="lg:col-span-1 flex flex-col gap-6">
-                {{ range first 4 (after 1 $.Site.RegularPages) }}
+                {{ range first 4 (after 1 $news) }}
                 <div class="flex gap-4 group">
                     <a href="{{ .Permalink }}" class="shrink-0 overflow-hidden rounded-md w-24 h-24 shadow-sm">
                         <img src="{{ .Params.featured_image }}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="{{ .Title }}">
                     </a>
                     <div class="flex flex-col justify-center">
-                        <!-- SAFETY CHECK KATEGORI -->
+                        <!-- Category Check -->
                         {{ if .Params.categories }}
                         <span class="text-[10px] font-bold text-red-600 uppercase mb-1 tracking-wider">
                             {{ index .Params.categories 0 }}
@@ -62,16 +78,16 @@
     </section>
     {{ end }}
 
-    <!-- BAGIAN 2: GRID BERITA TERBARU (Sisa Artikel) -->
+    <!-- BAGIAN 2: GRID BERITA TERBARU (Sisa Artikel dari $news) -->
     <section>
         <div class="flex items-center justify-between mb-8 border-l-4 border-red-600 pl-4">
             <h2 class="text-2xl font-black uppercase tracking-tighter text-gray-900">Latest Headlines</h2>
-            <a href="/categories" class="text-xs font-bold text-red-600 hover:text-black uppercase tracking-widest transition">View All News →</a>
+            <a href="/articles" class="text-xs font-bold text-red-600 hover:text-black uppercase tracking-widest transition">View All News →</a>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <!-- Filter hanya artikel yang punya gambar agar rapi -->
-            {{ range first 8 (after 5 .Site.RegularPages) }}
+            <!-- Loop sisa berita (mulai dari artikel ke-6 dst) -->
+            {{ range first 8 (after 5 $news) }}
             <article class="group flex flex-col h-full">
                 <a href="{{ .Permalink }}" class="block overflow-hidden rounded-lg mb-4 shadow-sm relative aspect-video">
                     {{ if .Params.featured_image }}
@@ -84,7 +100,6 @@
                 
                 <div class="flex flex-col flex-grow">
                     <div class="flex items-center gap-2 mb-2">
-                        <!-- SAFETY CHECK KATEGORI (FIX ERROR LINE 77) -->
                         {{ if .Params.categories }}
                         <span class="text-[10px] font-bold text-red-600 uppercase tracking-wider">
                             {{ index .Params.categories 0 }}
