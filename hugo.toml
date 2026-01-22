@@ -1,0 +1,29 @@
+#baseURL = "/"
+languageCode = "en-us"
+title = "US Daily Context"
+# theme = "neo-news"
+
+[params.author]
+  name = "Dave Harsya (Senior Analyst)"
+  email = "contact@soccerdaily.com"
+
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
+      
+# --- BAGIAN INI SANGAT PENTING ---
+[outputs]
+  home = ["HTML", "RSS","Sitemap"]    # HTML Wajib di urutan pertama!
+  page = ["HTML"]
+  section = ["HTML", "RSS"]
+  taxonomy = ["HTML", "RSS"]
+  term = ["HTML", "RSS"]
+
+[taxonomies]
+  category = "categories"
+  tag = "tags"
+
+[params]
+  description = "AI-Powered Journalism covering US Top Stories."
+  defaultImage = "/images/default-news.jpg"
