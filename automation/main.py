@@ -300,6 +300,7 @@ featured_image: "{final_img}"
 featured_image_alt: "{img_alt}"
 description: "{data['description']}"
 slug: "{slug}"
+url: "/{slug}/"
 draft: false
 ---
 
