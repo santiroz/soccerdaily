@@ -12,9 +12,13 @@
                     <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
                     <div class="absolute bottom-0 left-0 p-6 text-white w-full">
                         <div class="flex items-center gap-2 mb-3">
+                            <!-- SAFETY CHECK KATEGORI -->
+                            {{ if .Params.categories }}
                             <span class="bg-red-600 text-white px-2 py-1 text-[10px] font-black uppercase tracking-widest rounded-sm">
                                 {{ index .Params.categories 0 }}
                             </span>
+                            {{ end }}
+                            
                             <span class="text-xs text-gray-300 font-bold uppercase tracking-wide">
                                 {{ .Date.Format "Jan 02, 2006" }}
                             </span>
@@ -37,13 +41,16 @@
                         <img src="{{ .Params.featured_image }}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="{{ .Title }}">
                     </a>
                     <div class="flex flex-col justify-center">
+                        <!-- SAFETY CHECK KATEGORI -->
+                        {{ if .Params.categories }}
                         <span class="text-[10px] font-bold text-red-600 uppercase mb-1 tracking-wider">
                             {{ index .Params.categories 0 }}
                         </span>
+                        {{ end }}
+                        
                         <a href="{{ .Permalink }}" class="font-bold text-sm leading-snug text-gray-900 group-hover:text-red-600 transition-colors line-clamp-3 font-display">
                             {{ .Title }}
                         </a>
-                        <!-- PERBAIKAN: Menggunakan Author Asli -->
                         <span class="text-[10px] text-gray-500 mt-1 font-medium">
                             {{ .Date.Format "Jan 02" }} • <span class="text-gray-700">{{ .Params.author | default "Soccer Daily" }}</span>
                         </span>
@@ -63,19 +70,30 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <!-- Mengambil artikel mulai dari urutan ke-6 dst -->
+            <!-- Filter hanya artikel yang punya gambar agar rapi -->
             {{ range first 8 (after 5 .Site.RegularPages) }}
             <article class="group flex flex-col h-full">
                 <a href="{{ .Permalink }}" class="block overflow-hidden rounded-lg mb-4 shadow-sm relative aspect-video">
+                    {{ if .Params.featured_image }}
                     <img src="{{ .Params.featured_image }}" alt="{{ .Title }}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                    {{ else }}
+                    <div class="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400">No Image</div>
+                    {{ end }}
                     <div class="absolute bottom-0 left-0 bg-gradient-to-t from-black/60 to-transparent w-full h-1/2"></div>
                 </a>
                 
                 <div class="flex flex-col flex-grow">
                     <div class="flex items-center gap-2 mb-2">
+                        <!-- SAFETY CHECK KATEGORI (FIX ERROR LINE 77) -->
+                        {{ if .Params.categories }}
                         <span class="text-[10px] font-bold text-red-600 uppercase tracking-wider">
                             {{ index .Params.categories 0 }}
                         </span>
+                        {{ else }}
+                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                            NEWS
+                        </span>
+                        {{ end }}
                     </div>
                     
                     <h3 class="font-display font-bold text-lg leading-snug text-gray-900 group-hover:text-red-600 transition-colors mb-2 line-clamp-3">
@@ -84,11 +102,9 @@
                         </a>
                     </h3>
                     
-                    <!-- PERBAIKAN DI SINI: MENGHAPUS 'US DAILY' -->
                     <div class="mt-auto pt-2 flex items-center text-xs text-gray-400 font-medium">
                         <span>{{ .Date.Format "Jan 02" }}</span>
                         <span class="mx-1">•</span>
-                        <!-- Mengambil Params Author, jika kosong pakai Soccer Daily -->
                         <span class="text-gray-600 uppercase tracking-wide">
                             {{ .Params.author | default "Soccer Daily" }}
                         </span>
