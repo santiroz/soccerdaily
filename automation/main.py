@@ -97,48 +97,45 @@ def clean_text(text):
     cleaned = cleaned.strip()
     return cleaned
 
-# --- IMAGE ENGINE (ADOPTED FROM SUCCESSFUL SNIPPET) ---
+# --- IMAGE ENGINE (OPTIMIZED TIMEOUT & SEED) ---
 def download_and_optimize_image(query, filename):
     # Membersihkan query dan menambahkan konteks sepakbola
     base_prompt = f"{query} football match atmosphere 4k realistic"
-    # Logic encoding manual sesuai snippet Anda
     safe_prompt = base_prompt.replace(" ", "%20")[:200]
-    
-    # URL Construct dengan model 'flux-realism' sesuai request
-    image_url = f"https://image.pollinations.ai/prompt/{safe_prompt}?width=1280&height=720&nologo=true&model=flux-realism"
     
     print(f"      🎨 Generating Image: {base_prompt[:40]}...")
 
     for attempt in range(3):
+        # Tambahkan seed acak agar jika retry, server menganggap ini request baru (bukan cache)
+        seed = random.randint(1, 999999)
+        image_url = f"https://image.pollinations.ai/prompt/{safe_prompt}?width=1280&height=720&nologo=true&model=flux-realism&seed={seed}"
+        
         try:
-            # Menggunakan timeout 60 detik agar lebih longgar
-            response = requests.get(image_url, timeout=60)
+            # TIMEOUT DITINGKATKAN KE 120 DETIK (2 MENIT)
+            # Ini akan mengurangi error "Read timed out" secara signifikan
+            response = requests.get(image_url, timeout=120)
             
             if response.status_code == 200:
-                # Validasi Content-Type agar tidak terjebak error text/html
                 if "image" not in response.headers.get("content-type", ""):
                     print("      ⚠️ Not an image type. Retrying...")
                     time.sleep(2)
                     continue
 
                 img = Image.open(BytesIO(response.content))
-                img = img.convert("RGB") # Pastikan remove alpha channel
+                img = img.convert("RGB")
                 
-                # Resize ke 1280x720 sesuai snippet
                 img = img.resize((1280, 720), Image.Resampling.LANCZOS)
                 
                 output_path = f"{IMAGE_DIR}/{filename}"
-                # Save optimized JPEG
                 img.save(output_path, "JPEG", quality=85, optimize=True)
                 
                 print(f"      📸 Image Saved: {filename}")
-                return f"/images/{filename}" # BERHASIL: Return Path Lokal
+                return f"/images/{filename}" 
 
         except Exception as e:
             print(f"      ⚠️ Image fail (Attempt {attempt+1}): {e}")
-            time.sleep(5)
+            time.sleep(5) # Jeda 5 detik sebelum mencoba lagi
     
-    # Jika 3x percobaan gagal, gunakan Fallback Unsplash
     print("      ❌ Image failed after 3 attempts. Using Fallback.")
     return random.choice(FALLBACK_IMAGES)
 
@@ -281,7 +278,6 @@ def main():
             img_name = f"{slug}.jpg"
             keyword_for_image = data.get('main_keyword') or clean_title
             
-            # Panggil fungsi yang sudah diadaptasi
             final_img = download_and_optimize_image(keyword_for_image, img_name)
             
             date = datetime.now().strftime("%Y-%m-%dT%H:%M:%S+00:00")
@@ -317,7 +313,6 @@ draft: false
             cat_success_count += 1
             total_generated += 1
             
-            # Delay sedikit untuk napas
             time.sleep(5)
 
     print(f"\n🎉 DONE! Total: {total_generated}")
