@@ -4,6 +4,10 @@ title = "US Daily Context"
 # theme = "neo-news"
 canonifyURLs = true
 
+[permalinks]
+  # Ini perintahnya: Folder 'articles' -> Linknya jadi /judul-slug/
+  articles = '/:slug/'
+  
 [params.author]
   name = "Dave Harsya (Senior Analyst)"
   email = "contact@soccerdaily.com"
@@ -13,9 +17,6 @@ canonifyURLs = true
     [markup.goldmark.renderer]
       unsafe = true
 
-[permalinks]
-  # Ini perintahnya: Folder 'articles' -> Linknya jadi /judul-slug/
-  articles = '/:slug/'
   
 # --- BAGIAN INI SANGAT PENTING ---
 [outputs]
