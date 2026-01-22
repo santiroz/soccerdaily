@@ -35,7 +35,7 @@ AUTHORITY_SOURCES = [
     "WhoScored", "BBC Sport", "The Guardian", "UEFA Official", "ESPN FC"
 ]
 
-# --- FALLBACK IMAGES (JIKA IMAGE GENERATION GAGAL) ---
+# --- FALLBACK IMAGES (JIKA IMAGE GENERATION GAGAL TOTAL) ---
 FALLBACK_IMAGES = [
     "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80", # Stadium
     "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80", # Ball grass
@@ -97,55 +97,60 @@ def clean_text(text):
     cleaned = cleaned.strip()
     return cleaned
 
-# --- IMAGE ENGINE (POLLINATIONS FLUX - HIGH QUALITY) ---
+# --- IMAGE ENGINE (POLLINATIONS FLUX - WITH RETRY SYSTEM & INCREASED TIMEOUT) ---
 def download_and_optimize_image(query, filename):
-    # 1. Bersihkan Query & Tambahkan Prompt Modifier Profesional
+    # Bersihkan Query & Tambahkan Prompt Modifier Profesional
     clean_query = query.replace(":", "").replace("-", " ").replace("Official", "").strip()
     
-    # Prompt ini memaksa model FLUX menghasilkan gambar fotorealistik, bukan kartun
+    # Prompt Engineering untuk hasil fotorealistik
     prompt = f"{clean_query}, hyper-realistic football match photography, highly detailed stadium background, 8k resolution, cinematic lighting, action shot, sports photography, sharp focus, dramatic atmosphere, photo real"
     
-    # Parameter URL Pollinations
-    # model=flux -> Kualitas tertinggi (setara Midjourney)
-    # nologo=true -> Menghilangkan watermark
-    # seed -> Random agar gambar unik
-    seed = random.randint(1, 999999)
-    image_url = f"https://image.pollinations.ai/prompt/{prompt}?width=1280&height=720&model=flux&nologo=true&seed={seed}&enhance=true"
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
+    
+    MAX_RETRIES = 3   # Mencoba maksimal 3 kali jika server sibuk
+    TIMEOUT_SECONDS = 70 # Waktu tunggu diperpanjang jadi 70 detik
     
     print(f"      🎨 Generating Image (Pollinations): {clean_query}...")
-    
-    try:
-        # Timeout 45 detik karena model Flux butuh waktu render
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-        response = requests.get(image_url, headers=headers, timeout=45)
-        
-        if response.status_code == 200:
-            if "image" not in response.headers.get("content-type", ""):
-                 print("      ⚠️ Not an image content type. Using fallback.")
-                 return random.choice(FALLBACK_IMAGES)
 
-            img = Image.open(BytesIO(response.content))
-            img = img.convert("RGB")
+    for attempt in range(1, MAX_RETRIES + 1):
+        # Generate seed baru setiap percobaan agar Pollinations memproses ulang dengan worker berbeda
+        seed = random.randint(1, 999999)
+        image_url = f"https://image.pollinations.ai/prompt/{prompt}?width=1280&height=720&model=flux&nologo=true&seed={seed}&enhance=true"
+        
+        try:
+            response = requests.get(image_url, headers=headers, timeout=TIMEOUT_SECONDS)
             
-            # Resize ke Safe Zone Google Discover (1200x675)
-            img = img.resize((1200, 675), Image.Resampling.LANCZOS)
-            
-            # Sedikit sentuhan kontras agar gambar "pop" di layar HP
-            enhancer = ImageEnhance.Contrast(img)
-            img = enhancer.enhance(1.1)
-            
-            output_path = f"{IMAGE_DIR}/{filename}"
-            # Save sebagai JPEG Optimized Quality 85
-            img.save(output_path, "JPEG", quality=85, optimize=True)
-            
-            print(f"      📸 Image Saved: {filename}")
-            return f"/images/{filename}" # Berhasil download lokal
-            
-    except Exception as e:
-        print(f"      ⚠️ Image Error: {e}")
-    
-    # 2. Jika Gagal, Return Random Fallback URL
-    print("      ⚠️ Using Random Fallback Image.")
+            if response.status_code == 200:
+                if "image" not in response.headers.get("content-type", ""):
+                     print(f"      ⚠️ Not an image content. Retrying...")
+                     continue # Lanjut ke percobaan berikutnya
+
+                img = Image.open(BytesIO(response.content))
+                img = img.convert("RGB")
+                
+                # Resize & Optimasi untuk Google Discover (1200x675)
+                img = img.resize((1200, 675), Image.Resampling.LANCZOS)
+                
+                # Image Enhancement
+                enhancer = ImageEnhance.Contrast(img)
+                img = enhancer.enhance(1.1)
+                
+                output_path = f"{IMAGE_DIR}/{filename}"
+                # Save optimized JPEG
+                img.save(output_path, "JPEG", quality=85, optimize=True)
+                
+                print(f"      📸 Image Saved (Attempt {attempt}): {filename}")
+                return f"/images/{filename}" # Sukses
+                
+        except requests.exceptions.Timeout:
+            print(f"      ⏳ Timeout on attempt {attempt}/{MAX_RETRIES}. Retrying...")
+            time.sleep(3) # Jeda 3 detik sebelum mencoba lagi
+        except Exception as e:
+            print(f"      ⚠️ Error on attempt {attempt}/{MAX_RETRIES}: {e}")
+            time.sleep(3)
+
+    # Jika semua percobaan gagal (Loop selesai), gunakan fallback
+    print("      ❌ All attempts failed. Using Random Fallback Image.")
     return random.choice(FALLBACK_IMAGES)
 
 # --- AI WRITER ENGINE (BULLETPROOF PARSER) ---
@@ -285,11 +290,11 @@ def main():
             data = parse_ai_response(raw_response, clean_title, entry.summary)
             if not data: continue
 
-            # IMAGE PROCESSING (POLLINATIONS)
+            # IMAGE PROCESSING (POLLINATIONS WITH RETRY)
             img_name = f"{slug}.jpg"
             keyword_for_image = data.get('main_keyword') or clean_title
             
-            # Download dari Pollinations
+            # Download dari Pollinations dengan Retry Logic
             final_img = download_and_optimize_image(keyword_for_image, img_name)
             
             date = datetime.now().strftime("%Y-%m-%dT%H:%M:%S+00:00")
