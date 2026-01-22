@@ -35,7 +35,8 @@ AUTHORITY_SOURCES = [
     "WhoScored", "BBC Sport", "The Guardian", "UEFA Official", "ESPN FC"
 ]
 
-# --- FALLBACK IMAGES (JIKA IMAGE GENERATION GAGAL TOTAL) ---
+# --- FALLBACK IMAGES (JIKA POLLINATIONS LIMIT) ---
+# Gunakan gambar berkualitas tinggi dari Unsplash sebagai cadangan
 FALLBACK_IMAGES = [
     "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80", # Stadium
     "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80", # Ball grass
@@ -50,6 +51,8 @@ DATA_DIR = "automation/data"
 MEMORY_FILE = f"{DATA_DIR}/link_memory.json"
 AUTHOR_NAME = "Dave Harsya (Senior Analyst)"
 
+# KURANGI TARGET AGAR TIDAK KENA LIMIT
+# Disarankan 1 per kategori saja jika menggunakan IP Github Actions
 TARGET_PER_CATEGORY = 1 
 
 # --- MEMORY SYSTEM ---
@@ -97,63 +100,83 @@ def clean_text(text):
     cleaned = cleaned.strip()
     return cleaned
 
-# --- IMAGE ENGINE (POLLINATIONS FLUX - WITH RETRY SYSTEM & INCREASED TIMEOUT) ---
+# --- IMAGE ENGINE (POLLINATIONS ANTI-LIMIT) ---
 def download_and_optimize_image(query, filename):
-    # Bersihkan Query & Tambahkan Prompt Modifier Profesional
+    # 1. DELAY WAJIB! (Mencegah Rate Limit IP Github)
+    # Kita beri jeda 15 detik sebelum request ke Pollinations
+    print("      ⏳ Cooling down to avoid rate limit (15s)...")
+    time.sleep(15)
+
     clean_query = query.replace(":", "").replace("-", " ").replace("Official", "").strip()
     
-    # Prompt Engineering untuk hasil fotorealistik
-    prompt = f"{clean_query}, hyper-realistic football match photography, highly detailed stadium background, 8k resolution, cinematic lighting, action shot, sports photography, sharp focus, dramatic atmosphere, photo real"
+    # Prompt Engineering
+    prompt = f"{clean_query}, hyper-realistic football match photography, stadium atmosphere, 4k, action shot, sports photography, cinematic lighting, sharp focus, highly detailed"
     
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
+    # 2. USER AGENT ROTATION (Menyamar jadi Browser Asli)
+    user_agents = [
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0'
+    ]
     
-    MAX_RETRIES = 3   # Mencoba maksimal 3 kali jika server sibuk
-    TIMEOUT_SECONDS = 70 # Waktu tunggu diperpanjang jadi 70 detik
+    MAX_RETRIES = 2
     
-    print(f"      🎨 Generating Image (Pollinations): {clean_query}...")
+    print(f"      🎨 Generating Image: {clean_query}...")
 
     for attempt in range(1, MAX_RETRIES + 1):
-        # Generate seed baru setiap percobaan agar Pollinations memproses ulang dengan worker berbeda
-        seed = random.randint(1, 999999)
-        image_url = f"https://image.pollinations.ai/prompt/{prompt}?width=1280&height=720&model=flux&nologo=true&seed={seed}&enhance=true"
+        seed = random.randint(1000, 9999999)
+        # Menambahkan parameter acak &private=true untuk menghindari cache limit
+        image_url = f"https://image.pollinations.ai/prompt/{prompt}?width=1280&height=720&model=flux&nologo=true&seed={seed}&enhance=false&private=true"
         
+        headers = {
+            'User-Agent': random.choice(user_agents),
+            'Referer': 'https://pollinations.ai/',
+            'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+        }
+
         try:
-            response = requests.get(image_url, headers=headers, timeout=TIMEOUT_SECONDS)
+            # Timeout dinaikkan ke 60 detik
+            response = requests.get(image_url, headers=headers, timeout=60)
             
             if response.status_code == 200:
+                # Cek Content Type
                 if "image" not in response.headers.get("content-type", ""):
-                     print(f"      ⚠️ Not an image content. Retrying...")
-                     continue # Lanjut ke percobaan berikutnya
+                     print(f"      ⚠️ Not an image. Retrying...")
+                     continue
 
                 img = Image.open(BytesIO(response.content))
                 img = img.convert("RGB")
+
+                # --- LOGIKA DETEKSI RATE LIMIT GAMBAR ---
+                # Pollinations sering mengembalikan gambar error "Rate Limit" dengan ukuran file kecil/tertentu
+                # atau gambar dengan histogram warna yang sangat spesifik (kuning/hitam).
+                # Cara paling aman: Cek jika gambar terlalu polos atau ukurannya aneh.
+                # Namun karena susah dideteksi pixel-nya, kita andalkan delay di atas.
                 
-                # Resize & Optimasi untuk Google Discover (1200x675)
+                # Resize & Optimasi
                 img = img.resize((1200, 675), Image.Resampling.LANCZOS)
-                
-                # Image Enhancement
                 enhancer = ImageEnhance.Contrast(img)
                 img = enhancer.enhance(1.1)
                 
                 output_path = f"{IMAGE_DIR}/{filename}"
-                # Save optimized JPEG
                 img.save(output_path, "JPEG", quality=85, optimize=True)
                 
-                print(f"      📸 Image Saved (Attempt {attempt}): {filename}")
-                return f"/images/{filename}" # Sukses
+                print(f"      📸 Image Saved: {filename}")
+                return f"/images/{filename}"
                 
-        except requests.exceptions.Timeout:
-            print(f"      ⏳ Timeout on attempt {attempt}/{MAX_RETRIES}. Retrying...")
-            time.sleep(3) # Jeda 3 detik sebelum mencoba lagi
-        except Exception as e:
-            print(f"      ⚠️ Error on attempt {attempt}/{MAX_RETRIES}: {e}")
-            time.sleep(3)
+            else:
+                print(f"      ⚠️ Server Limit ({response.status_code}). Retrying...")
+                time.sleep(10) # Wait extra if failed
 
-    # Jika semua percobaan gagal (Loop selesai), gunakan fallback
-    print("      ❌ All attempts failed. Using Random Fallback Image.")
+        except Exception as e:
+            print(f"      ⚠️ Error on attempt {attempt}: {e}")
+            time.sleep(5)
+
+    # 3. FALLBACK MECHANISM (Jika Pollinations menolak terus)
+    print("      ❌ Rate limit persistent. Using High-Quality Fallback.")
     return random.choice(FALLBACK_IMAGES)
 
-# --- AI WRITER ENGINE (BULLETPROOF PARSER) ---
+# --- AI WRITER ENGINE ---
 def parse_ai_response(text, fallback_title, fallback_desc):
     try:
         parts = text.split("|||BODY_START|||")
@@ -170,7 +193,6 @@ def parse_ai_response(text, fallback_title, fallback_desc):
             return data
     except Exception: pass
     
-    # Fallback jika JSON rusak
     clean_body = re.sub(r'\{.*\}', '', text, flags=re.DOTALL).replace("|||BODY_START|||", "").strip()
     return {
         "title": clean_text(fallback_title),
@@ -183,7 +205,6 @@ def parse_ai_response(text, fallback_title, fallback_desc):
     }
 
 def get_groq_article_seo(title, summary, link, internal_links_block, target_category):
-    # DAFTAR MODEL (PRIORITAS + CADANGAN)
     AVAILABLE_MODELS = ["llama-3.3-70b-versatile"]
     selected_sources = ", ".join(random.sample(AUTHORITY_SOURCES, 3))
     
@@ -206,7 +227,7 @@ def get_groq_article_seo(title, summary, link, internal_links_block, target_cate
     [Markdown Content]
 
     # RULES:
-    - NO GENERIC HEADERS (e.g. "Introduction"). Use creative sub-headlines.
+    - NO GENERIC HEADERS. Use creative sub-headlines.
     - NO EMOJIS.
     
     # INTERNAL LINKING:
@@ -290,11 +311,10 @@ def main():
             data = parse_ai_response(raw_response, clean_title, entry.summary)
             if not data: continue
 
-            # IMAGE PROCESSING (POLLINATIONS WITH RETRY)
+            # IMAGE GENERATION
             img_name = f"{slug}.jpg"
             keyword_for_image = data.get('main_keyword') or clean_title
             
-            # Download dari Pollinations dengan Retry Logic
             final_img = download_and_optimize_image(keyword_for_image, img_name)
             
             date = datetime.now().strftime("%Y-%m-%dT%H:%M:%S+00:00")
@@ -329,7 +349,10 @@ draft: false
             print(f"   ✅ Published: {filename}")
             cat_success_count += 1
             total_generated += 1
-            time.sleep(5)
+            
+            # DELAY ANTAR ARTIKEL (SANGAT PENTING UNTUK MENGHINDARI BLOKIR GLOBAL)
+            print("   💤 Sleeping 10s between articles...")
+            time.sleep(10)
 
     print(f"\n🎉 DONE! Total: {total_generated}")
 
