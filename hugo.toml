@@ -12,7 +12,11 @@ title = "US Daily Context"
   [markup.goldmark]
     [markup.goldmark.renderer]
       unsafe = true
-      
+
+[permalinks]
+  # Ini perintahnya: Folder 'articles' -> Linknya jadi /judul-slug/
+  articles = '/:slug/'
+  
 # --- BAGIAN INI SANGAT PENTING ---
 [outputs]
   home = ["HTML", "RSS","Sitemap"]    # HTML Wajib di urutan pertama!
