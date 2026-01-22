@@ -35,7 +35,7 @@ AUTHORITY_SOURCES = [
     "WhoScored", "BBC Sport", "The Guardian", "UEFA Official", "ESPN FC"
 ]
 
-# --- FALLBACK IMAGES (JIKA BING BLOKIR/GAGAL) ---
+# --- FALLBACK IMAGES (JIKA IMAGE GENERATION GAGAL) ---
 FALLBACK_IMAGES = [
     "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80", # Stadium
     "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80", # Ball grass
@@ -97,40 +97,48 @@ def clean_text(text):
     cleaned = cleaned.strip()
     return cleaned
 
-# --- IMAGE ENGINE (ANTI-DUPLICATE & FALLBACK) ---
+# --- IMAGE ENGINE (POLLINATIONS FLUX - HIGH QUALITY) ---
 def download_and_optimize_image(query, filename):
-    # 1. Randomize Query agar hasil tidak selalu sama
-    suffixes = ["stadium atmosphere", "match action", "fans cheering", "soccer field", "night match"]
-    clean_query = f"{query} {random.choice(suffixes)}".replace(" ", "+")
+    # 1. Bersihkan Query & Tambahkan Prompt Modifier Profesional
+    clean_query = query.replace(":", "").replace("-", " ").replace("Official", "").strip()
     
-    image_url = f"https://tse2.mm.bing.net/th?q={clean_query}&w=1280&h=720&c=7&rs=1&p=0"
-    print(f"      🔍 Fetching Image: {clean_query}...")
+    # Prompt ini memaksa model FLUX menghasilkan gambar fotorealistik, bukan kartun
+    prompt = f"{clean_query}, hyper-realistic football match photography, highly detailed stadium background, 8k resolution, cinematic lighting, action shot, sports photography, sharp focus, dramatic atmosphere, photo real"
+    
+    # Parameter URL Pollinations
+    # model=flux -> Kualitas tertinggi (setara Midjourney)
+    # nologo=true -> Menghilangkan watermark
+    # seed -> Random agar gambar unik
+    seed = random.randint(1, 999999)
+    image_url = f"https://image.pollinations.ai/prompt/{prompt}?width=1280&height=720&model=flux&nologo=true&seed={seed}&enhance=true"
+    
+    print(f"      🎨 Generating Image (Pollinations): {clean_query}...")
     
     try:
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36'}
-        response = requests.get(image_url, headers=headers, timeout=20)
+        # Timeout 45 detik karena model Flux butuh waktu render
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+        response = requests.get(image_url, headers=headers, timeout=45)
         
         if response.status_code == 200:
-            if "image" not in response.headers.get("content-type", ""): 
-                print("      ⚠️ Not an image. Using fallback.")
-                return random.choice(FALLBACK_IMAGES)
+            if "image" not in response.headers.get("content-type", ""):
+                 print("      ⚠️ Not an image content type. Using fallback.")
+                 return random.choice(FALLBACK_IMAGES)
 
             img = Image.open(BytesIO(response.content))
             img = img.convert("RGB")
             
-            width, height = img.size
-            img = img.crop((width*0.1, height*0.1, width*0.9, height*0.9)) 
+            # Resize ke Safe Zone Google Discover (1200x675)
             img = img.resize((1200, 675), Image.Resampling.LANCZOS)
             
-            img = ImageOps.mirror(img) 
-            enhancer = ImageEnhance.Sharpness(img)
-            img = enhancer.enhance(1.4)
-            enhancer_col = ImageEnhance.Color(img)
-            img = enhancer_col.enhance(1.1)
+            # Sedikit sentuhan kontras agar gambar "pop" di layar HP
+            enhancer = ImageEnhance.Contrast(img)
+            img = enhancer.enhance(1.1)
             
             output_path = f"{IMAGE_DIR}/{filename}"
-            img.save(output_path, "JPEG", quality=92, optimize=True)
+            # Save sebagai JPEG Optimized Quality 85
+            img.save(output_path, "JPEG", quality=85, optimize=True)
             
+            print(f"      📸 Image Saved: {filename}")
             return f"/images/{filename}" # Berhasil download lokal
             
     except Exception as e:
@@ -277,11 +285,11 @@ def main():
             data = parse_ai_response(raw_response, clean_title, entry.summary)
             if not data: continue
 
-            # IMAGE PROCESSING (WITH FALLBACK)
+            # IMAGE PROCESSING (POLLINATIONS)
             img_name = f"{slug}.jpg"
             keyword_for_image = data.get('main_keyword') or clean_title
             
-            # Variable ini berisi Path Lokal ATAU URL Remote (jika fallback)
+            # Download dari Pollinations
             final_img = download_and_optimize_image(keyword_for_image, img_name)
             
             date = datetime.now().strftime("%Y-%m-%dT%H:%M:%S+00:00")
