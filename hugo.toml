@@ -1,8 +1,8 @@
-baseURL = "https://soccerdaily-alpha.vercel.app/"
+#baseURL = "/"
 languageCode = "en-us"
 title = "US Daily Context"
 # theme = "neo-news"
-canonifyURLs = true
+#canonifyURLs = true
 
 [params.author]
   name = "Dave Harsya (Senior Analyst)"
