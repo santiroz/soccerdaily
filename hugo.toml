@@ -1,4 +1,4 @@
-baseURL = "https://soccerdaily-alpha.vercel.app"
+baseURL = "https://soccerdaily-alpha.vercel.app/"
 languageCode = "en-us"
 title = "US Daily Context"
 # theme = "neo-news"
