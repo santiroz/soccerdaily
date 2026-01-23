@@ -1,7 +1,7 @@
-google-api-python-client
-oauth2client
 requests
 feedparser
 python-slugify
 Pillow
-groq 
+groq
+oauth2client
+google-api-python-client
