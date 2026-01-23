@@ -163,7 +163,7 @@ def download_and_optimize_image(query, filename):
                 output_path = f"{IMAGE_DIR}/{filename}"
                 
                 # 3. SAVE AS WEBP (Quality 85)
-                img.save(output_path, "WEBP", quality=85, method=6)
+               img.save(output_path, "WEBP", quality=75, method=6, optimize=True)
                 
                 print(f"      📸 HQ Image Saved: {filename}")
                 return f"/images/{filename}" 
