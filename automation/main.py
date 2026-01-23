@@ -21,7 +21,7 @@ GROQ_API_KEYS = [k.strip() for k in GROQ_KEYS_RAW.split(",") if k.strip()]
 
 # 🟢 CONFIGURASI DOMAIN & INDEXNOW (SESUAIKAN INI)
 # Ganti dengan domain asli Anda (tanpa garis miring di akhir)
-WEBSITE_URL = "https://www.namawebsiteanda.com" 
+WEBSITE_URL = "https://soccerdaily-alpha.vercel.app/" 
 
 # Key IndexNow yang Anda dapatkan tadi
 INDEXNOW_KEY = "b3317ae5f84348fa8c96528a43ab2655" 
