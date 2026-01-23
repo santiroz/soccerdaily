@@ -1,12 +1,10 @@
 {{ define "main" }}
 <div class="container mx-auto px-4 py-8">
 
-    <!-- SETUP VARIABLE: Hanya ambil konten dari folder 'articles' -->
     {{ $news := where .Site.RegularPages "Section" "articles" }}
 
     <!-- ====================================================================== -->
-    <!-- BAGIAN 1: HERO SECTION (1 Big + 4 Side) -->
-    <!-- Menampilkan Artikel ke-1 s/d ke-5 -->
+    <!-- BAGIAN 1: HERO SECTION (LCP ELEMENT - WAJIB CEPAT!) -->
     <!-- ====================================================================== -->
     {{ range first 1 $news }}
     <section class="mb-12">
@@ -14,7 +12,15 @@
             <!-- Main Headline -->
             <div class="lg:col-span-2 group relative overflow-hidden rounded-2xl shadow-xl">
                 <a href="{{ .Permalink }}" class="block h-full">
-                    <img src="{{ .Params.featured_image }}" alt="{{ .Title }}" class="w-full h-[400px] md:h-[500px] object-cover transition-transform duration-700 group-hover:scale-105">
+                    <!-- PERHATIKAN: loading="eager" & fetchpriority="high" -->
+                    <!-- Kita juga set width & height agar browser tidak layout shift (CLS) -->
+                    <img src="{{ .Params.featured_image }}" 
+                         alt="{{ .Title }}" 
+                         width="1200" height="675"
+                         loading="eager" 
+                         fetchpriority="high"
+                         class="w-full h-[400px] md:h-[500px] object-cover transition-transform duration-700 group-hover:scale-105">
+                    
                     <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
                     <div class="absolute bottom-0 left-0 p-6 md:p-8 w-full">
                         {{ if .Params.categories }}
@@ -28,26 +34,23 @@
                         <p class="text-gray-300 line-clamp-2 text-sm md:text-base max-w-2xl">
                             {{ .Summary }}
                         </p>
-                        <div class="mt-4 text-xs text-gray-400 font-bold uppercase tracking-wide">
-                            {{ .Date.Format "Jan 02, 2006" }} • {{ .Params.author | default "Soccer Daily" }}
-                        </div>
                     </div>
                 </a>
             </div>
 
-            <!-- Side List (4 Artikel Berikutnya) -->
+            <!-- Side List -->
             <div class="lg:col-span-1 flex flex-col justify-between gap-4">
                 {{ range first 4 (after 1 $news) }}
                 <article class="flex gap-4 group bg-white p-3 rounded-lg shadow-sm border border-gray-100 hover:border-red-100 transition">
                     <a href="{{ .Permalink }}" class="shrink-0 overflow-hidden rounded-md w-24 h-24">
-                        <img src="{{ .Params.featured_image }}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="{{ .Title }}">
+                        <!-- Side list pakai Lazy Load -->
+                        <img src="{{ .Params.featured_image }}" 
+                             alt="{{ .Title }}" 
+                             loading="lazy"
+                             width="200" height="200"
+                             class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
                     </a>
                     <div class="flex flex-col justify-center">
-                        {{ if .Params.categories }}
-                        <span class="text-[9px] font-bold text-red-600 uppercase mb-1 tracking-wider">
-                            {{ index .Params.categories 0 }}
-                        </span>
-                        {{ end }}
                         <a href="{{ .Permalink }}" class="font-bold text-sm leading-snug text-gray-900 group-hover:text-red-600 transition-colors line-clamp-2 font-display">
                             {{ .Title }}
                         </a>
@@ -63,9 +66,7 @@
     {{ end }}
 
     <!-- ====================================================================== -->
-    <!-- BAGIAN 2: FEATURED STRIP (3 Columns Image Heavy) -->
-    <!-- Menampilkan Artikel ke-6 s/d ke-8 -->
-    <!-- Variasi: Teks di atas gambar (Overlay) agar beda dengan grid biasa -->
+    <!-- BAGIAN 2: MUST READ (LAZY LOAD) -->
     <!-- ====================================================================== -->
     {{ if gt (len $news) 5 }}
     <section class="mb-16">
@@ -77,14 +78,13 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             {{ range first 3 (after 5 $news) }}
             <a href="{{ .Permalink }}" class="group relative h-64 rounded-xl overflow-hidden shadow-md">
-                <img src="{{ .Params.featured_image }}" alt="{{ .Title }}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
+                <!-- Lazy Load -->
+                <img src="{{ .Params.featured_image }}" 
+                     alt="{{ .Title }}" 
+                     loading="lazy"
+                     class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
                 <div class="absolute inset-0 bg-black/50 group-hover:bg-black/40 transition-colors"></div>
                 <div class="absolute bottom-0 left-0 p-5 w-full">
-                    {{ if .Params.categories }}
-                    <span class="text-[10px] text-red-400 font-bold uppercase tracking-wider mb-1 block">
-                        {{ index .Params.categories 0 }}
-                    </span>
-                    {{ end }}
                     <h3 class="text-white font-bold text-lg leading-snug group-hover:underline decoration-red-500 underline-offset-4">
                         {{ .Title }}
                     </h3>
@@ -96,9 +96,7 @@
     {{ end }}
 
     <!-- ====================================================================== -->
-    <!-- BAGIAN 3: SPLIT FOCUS (2 Big Columns) -->
-    <!-- Menampilkan Artikel ke-9 s/d ke-10 -->
-    <!-- Variasi: Tampilan layout 50:50 yang lebih lega -->
+    <!-- BAGIAN 3: SPLIT FOCUS (LAZY LOAD) -->
     <!-- ====================================================================== -->
     {{ if gt (len $news) 8 }}
     <section class="mb-16">
@@ -106,17 +104,13 @@
             {{ range first 2 (after 8 $news) }}
             <article class="group">
                 <a href="{{ .Permalink }}" class="block overflow-hidden rounded-xl mb-4 shadow-lg aspect-[16/9]">
-                    <img src="{{ .Params.featured_image }}" alt="{{ .Title }}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+                    <!-- Lazy Load -->
+                    <img src="{{ .Params.featured_image }}" 
+                         alt="{{ .Title }}" 
+                         loading="lazy"
+                         class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
                 </a>
                 <div class="flex flex-col">
-                    <div class="flex items-center gap-2 mb-2">
-                         {{ if .Params.categories }}
-                        <span class="bg-gray-100 text-gray-800 px-2 py-0.5 text-[10px] font-bold uppercase rounded">
-                            {{ index .Params.categories 0 }}
-                        </span>
-                        {{ end }}
-                        <span class="text-xs text-gray-400 font-medium">{{ .Date.Format "Jan 02, 2006" }}</span>
-                    </div>
                     <h2 class="text-2xl font-black text-gray-900 mb-2 leading-tight group-hover:text-red-600 transition-colors">
                         <a href="{{ .Permalink }}">{{ .Title }}</a>
                     </h2>
@@ -131,8 +125,7 @@
     {{ end }}
 
     <!-- ====================================================================== -->
-    <!-- BAGIAN 4: LATEST NEWS GRID (Sisa Artikel) -->
-    <!-- Menampilkan Artikel ke-11 dst... -->
+    <!-- BAGIAN 4: LATEST NEWS (LAZY LOAD) -->
     <!-- ====================================================================== -->
     <section>
         <div class="flex items-center justify-between mb-8 border-b border-gray-200 pb-4">
@@ -149,32 +142,22 @@
             <article class="group flex flex-col h-full border-b border-gray-100 pb-6 md:border-none md:pb-0">
                 <a href="{{ .Permalink }}" class="block overflow-hidden rounded-lg mb-3 shadow-sm relative aspect-[3/2]">
                     {{ if .Params.featured_image }}
-                    <img src="{{ .Params.featured_image }}" alt="{{ .Title }}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                    <!-- Lazy Load -->
+                    <img src="{{ .Params.featured_image }}" 
+                         alt="{{ .Title }}" 
+                         loading="lazy"
+                         class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
                     {{ else }}
                     <div class="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400 text-xs">NO IMAGE</div>
                     {{ end }}
                 </a>
                 
                 <div class="flex flex-col flex-grow">
-                    <div class="mb-2">
-                        {{ if .Params.categories }}
-                        <span class="text-[10px] font-bold text-red-600 uppercase tracking-wider">
-                            {{ index .Params.categories 0 }}
-                        </span>
-                        {{ end }}
-                    </div>
-                    
                     <h3 class="font-display font-bold text-base leading-snug text-gray-900 group-hover:text-red-600 transition-colors mb-2 line-clamp-3">
                         <a href="{{ .Permalink }}">
                             {{ .Title }}
                         </a>
                     </h3>
-                    
-                    <div class="mt-auto pt-2 flex items-center text-[10px] text-gray-400 font-medium uppercase tracking-wide">
-                        <span>{{ .Date.Format "Jan 02" }}</span>
-                        <span class="mx-1 text-gray-300">•</span>
-                        <span>{{ .Params.author | default "Soccer Daily" }}</span>
-                    </div>
                 </div>
             </article>
             {{ end }}
