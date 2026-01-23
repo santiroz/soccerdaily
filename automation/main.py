@@ -5,11 +5,16 @@ import feedparser
 import time
 import re
 import random
+import warnings # Ditambahkan untuk kebersihan Log
 from datetime import datetime
 from slugify import slugify
 from io import BytesIO
 from PIL import Image, ImageEnhance, ImageOps
 from groq import Groq, APIError, RateLimitError, BadRequestError
+
+# --- SUPPRESS GOOGLE WARNINGS ---
+# Menghilangkan pesan "FutureWarning" agar log GitHub bersih
+warnings.filterwarnings("ignore", category=FutureWarning, module="google.api_core")
 
 # --- GOOGLE INDEXING LIBS ---
 from oauth2client.service_account import ServiceAccountCredentials
@@ -19,11 +24,11 @@ from googleapiclient.discovery import build
 GROQ_KEYS_RAW = os.environ.get("GROQ_API_KEY", "")
 GROQ_API_KEYS = [k.strip() for k in GROQ_KEYS_RAW.split(",") if k.strip()]
 
-# 🟢 CONFIGURASI DOMAIN & INDEXNOW (SESUAIKAN INI)
-# Ganti dengan domain asli Anda (tanpa garis miring di akhir)
-WEBSITE_URL = "https://soccerdaily-alpha.vercel.app/" 
+# 🟢 CONFIGURASI DOMAIN & INDEXNOW
+# Hapus tanda slash '/' di akhir URL agar rapi saat digabung
+WEBSITE_URL = "https://soccerdaily-alpha.vercel.app" 
 
-# Key IndexNow yang Anda dapatkan tadi
+# Key IndexNow Anda
 INDEXNOW_KEY = "b3317ae5f84348fa8c96528a43ab2655" 
 
 # Google JSON Key (Dari Secrets GitHub)
@@ -166,18 +171,18 @@ def submit_to_google(url):
         service.urlNotifications().publish(body=body).execute()
         print(f"      🚀 Google Indexing Submitted: {url}")
     except Exception as e:
-        print(f"      ⚠️ Google Indexing Error: {e}")
+        # Ignore warning messages in logs
+        if "FutureWarning" not in str(e):
+             print(f"      ⚠️ Google Indexing Error: {e}")
 
 def submit_to_indexnow(url):
-    # Validasi apakah URL website sudah diisi user
+    # Cek apakah user lupa mengganti URL default
     if "namawebsiteanda" in WEBSITE_URL:
         print("      ⚠️ IndexNow Skipped: WEBSITE_URL belum diganti.")
         return
 
     try:
         endpoint = "https://api.indexnow.org/indexnow"
-        
-        # Membersihkan format host (menghilangkan https://)
         host = WEBSITE_URL.replace("https://", "").replace("http://", "")
         
         data = {
@@ -372,13 +377,11 @@ draft: false
             total_generated += 1
             
             # --- AUTO INDEXING TRIGGER ---
+            # Menggunakan strip() untuk memastikan tidak ada slash ganda
             full_article_url = f"{WEBSITE_URL}/{slug}/"
             print(f"   🚀 Submitting for Indexing: {full_article_url}")
             
-            # Kirim ke IndexNow (Bing, Yandex, dll)
             submit_to_indexnow(full_article_url)
-            
-            # Kirim ke Google
             submit_to_google(full_article_url)
             
             time.sleep(5)
