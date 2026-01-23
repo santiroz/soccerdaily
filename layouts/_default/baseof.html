@@ -5,21 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     
-    <!-- 1. PRECONNECT (Lakukan ini paling pertama) -->
-    <link rel="preconnect" href="https://cdn.tailwindcss.com">
+    <!-- =======================================================
+         1. PERFORMANCE BOOSTERS (CRITICAL PATH)
+         ======================================================= -->
+    <!-- Preconnect ke server CDN agar koneksi terbuka duluan -->
+    <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="dns-prefetch" href="https://s10.histats.com"> <!-- Percepat Histats -->
+    <link rel="dns-prefetch" href="https://s10.histats.com">
 
-    <!-- 2. METADATA DASAR -->
+    <!-- PRELOAD TAILWIND (SOLUSI RENDER BLOCKING) -->
+    <!-- Memaksa browser download script ini SEKARANG JUGA (High Priority) -->
+    <link rel="preload" href="https://cdn.tailwindcss.com?plugins=typography,line-clamp" as="script">
+
+    <!-- 2. METADATA -->
     <title>{{ if .IsHome }}{{ .Site.Title }} - Breaking Football News & Scores{{ else }}{{ .Title }} | {{ .Site.Title }}{{ end }}</title>
     <meta name="description" content="{{ if .IsPage }}{{ .Params.description | default .Summary }}{{ else }}{{ .Site.Params.description }}{{ end }}">
     <link rel="canonical" href="{{ .Permalink }}">
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
-    <meta name="theme-color" content="#111827"> <!-- Update warna theme ke Dark (sesuai header) -->
+    <meta name="theme-color" content="#111827">
 
-    <!-- 3. TAILWIND CSS (Script CDN) -->
-    <!-- Kita konfigurasi font di sini agar tidak layout shift -->
+    <!-- 3. TAILWIND CSS -->
+    <!-- Load script setelah preload -->
     <script src="https://cdn.tailwindcss.com?plugins=typography,line-clamp"></script>
     <script>
         tailwind.config = {
@@ -34,14 +41,14 @@
         }
     </script>
 
-    <!-- 4. GOOGLE FONTS (Load Async) -->
+    <!-- 4. GOOGLE FONTS (Non-Blocking Strategy) -->
     <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@300;400;500;700;900&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
     <noscript>
         <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@300;400;500;700;900&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     </noscript>
 
     <!-- =======================================================
-         OPEN GRAPH & SCHEMA (Tetap Sama - Sudah Bagus)
+         5. OPEN GRAPH & META TAGS
          ======================================================= -->
     <meta property="og:locale" content="{{ .Site.LanguageCode | default "en_GB" }}">
     <meta property="og:site_name" content="{{ .Site.Title }}">
