@@ -5,33 +5,43 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     
-    <!-- 1. DYNAMIC TITLE -->
-    <title>{{ if .IsHome }}{{ .Site.Title }} - Breaking Football News & Scores{{ else }}{{ .Title }} | {{ .Site.Title }}{{ end }}</title>
-    
-    <meta name="description" content="{{ if .IsPage }}{{ .Params.description | default .Summary }}{{ else }}{{ .Site.Params.description }}{{ end }}">
-    
-    <!-- 2. CANONICAL URL -->
-    <link rel="canonical" href="{{ .Permalink }}">
-    
-    <!-- DISCOVER & ROBOTS TAGS (WAJIB ADA) -->
-    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
-    <meta name="theme-color" content="#ffffff">
-
-    <!-- 3. PERFORMANCE BOOSTER (PRECONNECT) -->
-    <!-- Memberitahu browser untuk konek ke server ini SEGERA -->
+    <!-- 1. PRECONNECT (Lakukan ini paling pertama) -->
+    <link rel="preconnect" href="https://cdn.tailwindcss.com">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preconnect" href="https://cdn.tailwindcss.com"> <!-- Tambahan Penting -->
-    <link rel="dns-prefetch" href="https://cdn.tailwindcss.com">
+    <link rel="dns-prefetch" href="https://s10.histats.com"> <!-- Percepat Histats -->
 
-    <!-- 4. FONTS (Display Swap agar teks muncul duluan) -->
-    <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@300;400;500;700;900&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-    
-    <!-- 5. TAILWIND CSS -->
+    <!-- 2. METADATA DASAR -->
+    <title>{{ if .IsHome }}{{ .Site.Title }} - Breaking Football News & Scores{{ else }}{{ .Title }} | {{ .Site.Title }}{{ end }}</title>
+    <meta name="description" content="{{ if .IsPage }}{{ .Params.description | default .Summary }}{{ else }}{{ .Site.Params.description }}{{ end }}">
+    <link rel="canonical" href="{{ .Permalink }}">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+    <meta name="theme-color" content="#111827"> <!-- Update warna theme ke Dark (sesuai header) -->
+
+    <!-- 3. TAILWIND CSS (Script CDN) -->
+    <!-- Kita konfigurasi font di sini agar tidak layout shift -->
     <script src="https://cdn.tailwindcss.com?plugins=typography,line-clamp"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Roboto', 'sans-serif'],
+                        display: ['Libre Franklin', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- 4. GOOGLE FONTS (Load Async) -->
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@300;400;500;700;900&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript>
+        <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@300;400;500;700;900&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    </noscript>
 
     <!-- =======================================================
-         6. DYNAMIC OPEN GRAPH
+         OPEN GRAPH & SCHEMA (Tetap Sama - Sudah Bagus)
          ======================================================= -->
     <meta property="og:locale" content="{{ .Site.LanguageCode | default "en_GB" }}">
     <meta property="og:site_name" content="{{ .Site.Title }}">
@@ -50,7 +60,6 @@
     <meta property="og:image" content="{{ "images/default-football.jpg" | absURL }}">
     {{ end }}
 
-    <!-- META ARTIKEL -->
     {{ if .IsPage }}
     <meta property="article:published_time" content="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}">
     <meta property="article:modified_time" content="{{ .Lastmod.Format "2006-01-02T15:04:05Z07:00" }}">
@@ -62,24 +71,16 @@
     {{ end }}
     {{ end }}
 
-    <!-- =======================================================
-         7. TWITTER CARDS
-         ======================================================= -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ .Title }}">
     <meta name="twitter:description" content="{{ if .IsPage }}{{ .Params.description | default .Summary }}{{ else }}{{ .Site.Params.description }}{{ end }}">
-    
     {{ if .Params.featured_image }}
     <meta name="twitter:image" content="{{ .Params.featured_image | absURL }}">
     {{ else }}
     <meta name="twitter:image" content="{{ "images/default-football.jpg" | absURL }}">
     {{ end }}
-    
     <meta name="twitter:domain" content="{{ replaceRE "^https?://([^/]+).*" "$1" .Site.BaseURL }}">
 
-    <!-- =======================================================
-         8. SCHEMA.ORG JSON-LD
-         ======================================================= -->
     {{ if .IsPage }}
     <script type="application/ld+json">
     {
@@ -90,9 +91,7 @@
         "@id": "{{ .Permalink }}"
       },
       "headline": "{{ .Title }}",
-      "image": [
-        "{{ .Params.featured_image | absURL }}"
-       ],
+      "image": [ "{{ .Params.featured_image | absURL }}" ],
       "datePublished": "{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}",
       "dateModified": "{{ .Lastmod.Format "2006-01-02T15:04:05Z07:00" }}",
       "author": {
@@ -112,24 +111,14 @@
     </script>
     {{ end }}
 
-    <!-- ASSETS -->
     <link rel="icon" href="{{ "favicon.svg" | absURL }}" type="image/svg+xml">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ "favicon.svg" | absURL }}">
     
 </head>
 <body class="bg-white text-news-dark font-sans antialiased flex flex-col min-h-screen">
-
-    <!-- Header (Pastikan di dalam partial header ada <header> tag) -->
     {{ partial "header.html" . }}
-
-    <!-- Main Content -->
-    <!-- role="main" meningkatkan skor accessibility -->
     <main id="main-content" role="main" class="flex-grow">
         {{ block "main" . }}{{ end }}
     </main>
-
-    <!-- Footer (Pastikan di dalam partial footer ada <footer> tag) -->
     {{ partial "footer.html" . }}
-
 </body>
 </html>
