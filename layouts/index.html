@@ -1,6 +1,7 @@
 {{ define "main" }}
 <div class="container mx-auto px-4 py-8">
 
+    <!-- SETUP VARIABLE: Hanya ambil konten dari folder 'articles' -->
     {{ $news := where .Site.RegularPages "Section" "articles" }}
 
     <!-- ====================================================================== -->
@@ -13,7 +14,7 @@
             <div class="lg:col-span-2 group relative overflow-hidden rounded-2xl shadow-xl">
                 <a href="{{ .Permalink }}" class="block h-full">
                     <!-- PERHATIKAN: loading="eager" & fetchpriority="high" -->
-                    <!-- Kita juga set width & height agar browser tidak layout shift (CLS) -->
+                    <!-- Width & Height diset agar browser tidak layout shift (CLS) -->
                     <img src="{{ .Params.featured_image }}" 
                          alt="{{ .Title }}" 
                          width="1200" height="675"
@@ -34,6 +35,9 @@
                         <p class="text-gray-300 line-clamp-2 text-sm md:text-base max-w-2xl">
                             {{ .Summary }}
                         </p>
+                        <div class="mt-4 text-xs text-gray-400 font-bold uppercase tracking-wide">
+                            {{ .Date.Format "Jan 02, 2006" }} • {{ .Params.author | default "Soccer Daily" }}
+                        </div>
                     </div>
                 </a>
             </div>
@@ -51,6 +55,11 @@
                              class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
                     </a>
                     <div class="flex flex-col justify-center">
+                        {{ if .Params.categories }}
+                        <span class="text-[9px] font-bold text-red-600 uppercase mb-1 tracking-wider">
+                            {{ index .Params.categories 0 }}
+                        </span>
+                        {{ end }}
                         <a href="{{ .Permalink }}" class="font-bold text-sm leading-snug text-gray-900 group-hover:text-red-600 transition-colors line-clamp-2 font-display">
                             {{ .Title }}
                         </a>
@@ -85,6 +94,11 @@
                      class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
                 <div class="absolute inset-0 bg-black/50 group-hover:bg-black/40 transition-colors"></div>
                 <div class="absolute bottom-0 left-0 p-5 w-full">
+                    {{ if .Params.categories }}
+                    <span class="text-[10px] text-red-400 font-bold uppercase tracking-wider mb-1 block">
+                        {{ index .Params.categories 0 }}
+                    </span>
+                    {{ end }}
                     <h3 class="text-white font-bold text-lg leading-snug group-hover:underline decoration-red-500 underline-offset-4">
                         {{ .Title }}
                     </h3>
@@ -111,6 +125,14 @@
                          class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
                 </a>
                 <div class="flex flex-col">
+                    <div class="flex items-center gap-2 mb-2">
+                         {{ if .Params.categories }}
+                        <span class="bg-gray-100 text-gray-800 px-2 py-0.5 text-[10px] font-bold uppercase rounded">
+                            {{ index .Params.categories 0 }}
+                        </span>
+                        {{ end }}
+                        <span class="text-xs text-gray-400 font-medium">{{ .Date.Format "Jan 02, 2006" }}</span>
+                    </div>
                     <h2 class="text-2xl font-black text-gray-900 mb-2 leading-tight group-hover:text-red-600 transition-colors">
                         <a href="{{ .Permalink }}">{{ .Title }}</a>
                     </h2>
@@ -132,7 +154,7 @@
             <h2 class="text-2xl font-black uppercase tracking-tighter text-gray-900 flex items-center gap-2">
                 <span class="text-red-600 text-3xl">/</span> More Headlines
             </h2>
-            <a href="/articles" class="text-xs font-bold bg-black text-white px-4 py-2 rounded-full hover:bg-red-600 transition uppercase tracking-widest">
+            <a href="/articles" aria-label="View all news archives" class="text-xs font-bold bg-black text-white px-4 py-2 rounded-full hover:bg-red-600 transition uppercase tracking-widest">
                 View Archive
             </a>
         </div>
@@ -140,7 +162,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-10">
             {{ range first 12 (after 10 $news) }}
             <article class="group flex flex-col h-full border-b border-gray-100 pb-6 md:border-none md:pb-0">
-                <a href="{{ .Permalink }}" class="block overflow-hidden rounded-lg mb-3 shadow-sm relative aspect-[3/2]">
+                <a href="{{ .Permalink }}" aria-label="Read full article: {{ .Title }}" class="block overflow-hidden rounded-lg mb-3 shadow-sm relative aspect-[3/2]">
                     {{ if .Params.featured_image }}
                     <!-- Lazy Load -->
                     <img src="{{ .Params.featured_image }}" 
@@ -153,11 +175,25 @@
                 </a>
                 
                 <div class="flex flex-col flex-grow">
+                    <div class="mb-2">
+                        {{ if .Params.categories }}
+                        <span class="text-[10px] font-bold text-red-600 uppercase tracking-wider">
+                            {{ index .Params.categories 0 }}
+                        </span>
+                        {{ end }}
+                    </div>
+                    
                     <h3 class="font-display font-bold text-base leading-snug text-gray-900 group-hover:text-red-600 transition-colors mb-2 line-clamp-3">
                         <a href="{{ .Permalink }}">
                             {{ .Title }}
                         </a>
                     </h3>
+                    
+                    <div class="mt-auto pt-2 flex items-center text-[10px] text-gray-400 font-medium uppercase tracking-wide">
+                        <span>{{ .Date.Format "Jan 02" }}</span>
+                        <span class="mx-1 text-gray-300">•</span>
+                        <span>{{ .Params.author | default "Soccer Daily" }}</span>
+                    </div>
                 </div>
             </article>
             {{ end }}
