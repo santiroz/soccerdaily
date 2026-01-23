@@ -33,7 +33,6 @@ if not GROQ_API_KEYS:
     exit(1)
 
 # --- TIM PENULIS (NEWSROOM) ---
-# Script akan memilih satu secara acak untuk setiap artikel
 AUTHOR_PROFILES = [
     "Dave Harsya (Senior Analyst)",
     "Sarah Jenkins (Chief Editor)",
@@ -122,16 +121,22 @@ def clean_text(text):
     cleaned = cleaned.strip()
     return cleaned
 
-# --- IMAGE ENGINE (FLUX REALISM - ROBUST) ---
+# --- IMAGE ENGINE (HQ WEBP + SHARPNESS BOOSTER) ---
 def download_and_optimize_image(query, filename):
-    base_prompt = f"{query} football match atmosphere 4k realistic"
-    safe_prompt = base_prompt.replace(" ", "%20")[:200]
+    # Paksa ekstensi .webp
+    if not filename.endswith(".webp"):
+        filename = filename.rsplit(".", 1)[0] + ".webp"
+
+    # Prompt Engineering: Detail Tinggi
+    base_prompt = f"{query} football match action, stadium atmosphere, 8k resolution, highly detailed, photorealistic, cinematic lighting, sharp focus, professional sports photography"
+    safe_prompt = base_prompt.replace(" ", "%20")[:250]
     
-    print(f"      🎨 Generating Image: {base_prompt[:40]}...")
+    print(f"      🎨 Generating HQ Image: {base_prompt[:40]}...")
 
     for attempt in range(3):
         seed = random.randint(1, 999999)
-        image_url = f"https://image.pollinations.ai/prompt/{safe_prompt}?width=1280&height=720&nologo=true&model=flux-realism&seed={seed}"
+        # Gunakan model Flux Realism
+        image_url = f"https://image.pollinations.ai/prompt/{safe_prompt}?width=1280&height=720&nologo=true&model=flux-realism&seed={seed}&enhance=true"
         
         try:
             response = requests.get(image_url, timeout=120)
@@ -145,12 +150,22 @@ def download_and_optimize_image(query, filename):
                 img = Image.open(BytesIO(response.content))
                 img = img.convert("RGB")
                 
-                img = img.resize((1280, 720), Image.Resampling.LANCZOS)
+                # 1. RESIZE 16:9 (1200x675) Standard Discover
+                img = img.resize((1200, 675), Image.Resampling.LANCZOS)
                 
+                # 2. VISUAL ENHANCEMENT (Agar Tajam di HP)
+                enhancer_sharp = ImageEnhance.Sharpness(img)
+                img = enhancer_sharp.enhance(1.3) # Tajamkan 30%
+                
+                enhancer_color = ImageEnhance.Color(img)
+                img = enhancer_color.enhance(1.1) # Warna +10%
+
                 output_path = f"{IMAGE_DIR}/{filename}"
-                img.save(output_path, "JPEG", quality=85, optimize=True)
                 
-                print(f"      📸 Image Saved: {filename}")
+                # 3. SAVE AS WEBP (Quality 85)
+                img.save(output_path, "WEBP", quality=85, method=6)
+                
+                print(f"      📸 HQ Image Saved: {filename}")
                 return f"/images/{filename}" 
 
         except Exception as e:
@@ -181,9 +196,8 @@ def submit_to_google(url):
              print(f"      ⚠️ Google Indexing Error: {e}")
 
 def submit_to_indexnow(url):
-    if "namawebsiteanda" in WEBSITE_URL:
-        print("      ⚠️ IndexNow Skipped: WEBSITE_URL belum diganti.")
-        return
+    if "soccerdaily" in WEBSITE_URL and "soccerdaily-alpha" not in WEBSITE_URL:
+         pass # Check logic sederhana
 
     try:
         endpoint = "https://api.indexnow.org/indexnow"
@@ -336,7 +350,6 @@ def main():
             print(f"   🔥 Processing: {clean_title[:40]}... (Author: {current_author})")
             
             links_block = get_formatted_internal_links()
-            # Kirim nama author ke AI agar gaya bahasanya mungkin sedikit menyesuaikan (opsional)
             raw_response = get_groq_article_seo(clean_title, entry.summary, entry.link, links_block, category_name, current_author)
             
             if not raw_response: continue
@@ -344,8 +357,8 @@ def main():
             data = parse_ai_response(raw_response, clean_title, entry.summary)
             if not data: continue
 
-            # IMAGE GENERATION
-            img_name = f"{slug}.jpg"
+            # IMAGE GENERATION (WEBP)
+            img_name = f"{slug}.webp"
             keyword_for_image = data.get('main_keyword') or clean_title
             
             final_img = download_and_optimize_image(keyword_for_image, img_name)
