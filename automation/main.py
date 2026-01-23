@@ -5,15 +5,14 @@ import feedparser
 import time
 import re
 import random
-import warnings # Ditambahkan untuk kebersihan Log
+import warnings 
 from datetime import datetime
 from slugify import slugify
 from io import BytesIO
 from PIL import Image, ImageEnhance, ImageOps
 from groq import Groq, APIError, RateLimitError, BadRequestError
 
-# --- SUPPRESS GOOGLE WARNINGS ---
-# Menghilangkan pesan "FutureWarning" agar log GitHub bersih
+# --- SUPPRESS WARNINGS ---
 warnings.filterwarnings("ignore", category=FutureWarning, module="google.api_core")
 
 # --- GOOGLE INDEXING LIBS ---
@@ -25,18 +24,26 @@ GROQ_KEYS_RAW = os.environ.get("GROQ_API_KEY", "")
 GROQ_API_KEYS = [k.strip() for k in GROQ_KEYS_RAW.split(",") if k.strip()]
 
 # 🟢 CONFIGURASI DOMAIN & INDEXNOW
-# Hapus tanda slash '/' di akhir URL agar rapi saat digabung
-WEBSITE_URL = "https://soccerdaily-alpha.vercel.app" 
-
-# Key IndexNow Anda
+WEBSITE_URL = "https://soccerdaily-alpha.vercel.app" # Tanpa slash di akhir
 INDEXNOW_KEY = "b3317ae5f84348fa8c96528a43ab2655" 
-
-# Google JSON Key (Dari Secrets GitHub)
 GOOGLE_JSON_KEY = os.environ.get("GOOGLE_INDEXING_KEY", "") 
 
 if not GROQ_API_KEYS:
     print("❌ FATAL ERROR: Groq API Key is missing!")
     exit(1)
+
+# --- TIM PENULIS (NEWSROOM) ---
+# Script akan memilih satu secara acak untuk setiap artikel
+AUTHOR_PROFILES = [
+    "Dave Harsya (Senior Analyst)",
+    "Sarah Jenkins (Chief Editor)",
+    "Luca Romano (Transfer Specialist)",
+    "Marcus Reynolds (Premier League Correspondent)",
+    "Elena Petrova (Tactical Expert)",
+    "Hiroshi Tanaka (Data Scout)",
+    "Ben Foster (Sports Journalist)",
+    "Mateo Rodriguez (European Football Analyst)"
+]
 
 # --- CATEGORY RSS FEED ---
 CATEGORY_URLS = {
@@ -67,7 +74,6 @@ CONTENT_DIR = "content/articles"
 IMAGE_DIR = "static/images"
 DATA_DIR = "automation/data"
 MEMORY_FILE = f"{DATA_DIR}/link_memory.json"
-AUTHOR_NAME = "Dave Harsya (Senior Analyst)"
 
 TARGET_PER_CATEGORY = 1 
 
@@ -171,12 +177,10 @@ def submit_to_google(url):
         service.urlNotifications().publish(body=body).execute()
         print(f"      🚀 Google Indexing Submitted: {url}")
     except Exception as e:
-        # Ignore warning messages in logs
         if "FutureWarning" not in str(e):
              print(f"      ⚠️ Google Indexing Error: {e}")
 
 def submit_to_indexnow(url):
-    # Cek apakah user lupa mengganti URL default
     if "namawebsiteanda" in WEBSITE_URL:
         print("      ⚠️ IndexNow Skipped: WEBSITE_URL belum diganti.")
         return
@@ -230,12 +234,12 @@ def parse_ai_response(text, fallback_title, fallback_desc):
         "content": clean_body
     }
 
-def get_groq_article_seo(title, summary, link, internal_links_block, target_category):
+def get_groq_article_seo(title, summary, link, internal_links_block, target_category, author_name):
     AVAILABLE_MODELS = ["llama-3.3-70b-versatile"]
     selected_sources = ", ".join(random.sample(AUTHORITY_SOURCES, 3))
     
     system_prompt = f"""
-    You are Dave Harsya, a Senior Football Analyst for 'Soccer Daily'.
+    You are {author_name} for 'Soccer Daily'.
     TARGET CATEGORY: {target_category}
     
     GOAL: Write a 1200+ word article with UNIQUE HEADERS & DIVERSE SOURCES.
@@ -327,10 +331,13 @@ def main():
 
             if os.path.exists(f"{CONTENT_DIR}/{filename}"): continue
 
-            print(f"   🔥 Processing: {clean_title[:40]}...")
+            # PILIH PENULIS SECARA ACAK
+            current_author = random.choice(AUTHOR_PROFILES)
+            print(f"   🔥 Processing: {clean_title[:40]}... (Author: {current_author})")
             
             links_block = get_formatted_internal_links()
-            raw_response = get_groq_article_seo(clean_title, entry.summary, entry.link, links_block, category_name)
+            # Kirim nama author ke AI agar gaya bahasanya mungkin sedikit menyesuaikan (opsional)
+            raw_response = get_groq_article_seo(clean_title, entry.summary, entry.link, links_block, category_name, current_author)
             
             if not raw_response: continue
 
@@ -352,7 +359,7 @@ def main():
             md = f"""---
 title: "{data['title']}"
 date: {date}
-author: "{AUTHOR_NAME}"
+author: "{current_author}"
 categories: ["{data['category']}"]
 tags: {tags_str}
 featured_image: "{final_img}"
@@ -366,7 +373,7 @@ draft: false
 {data['content']}
 
 ---
-*Source: Analysis by {AUTHOR_NAME} based on international reports and [Original Story]({entry.link}).*
+*Source: Analysis by {current_author} based on international reports and [Original Story]({entry.link}).*
 """
             with open(f"{CONTENT_DIR}/{filename}", "w", encoding="utf-8") as f: f.write(md)
             
@@ -377,7 +384,6 @@ draft: false
             total_generated += 1
             
             # --- AUTO INDEXING TRIGGER ---
-            # Menggunakan strip() untuk memastikan tidak ada slash ganda
             full_article_url = f"{WEBSITE_URL}/{slug}/"
             print(f"   🚀 Submitting for Indexing: {full_article_url}")
             
