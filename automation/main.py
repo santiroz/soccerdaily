@@ -11,9 +11,18 @@ from io import BytesIO
 from PIL import Image, ImageEnhance, ImageOps
 from groq import Groq, APIError, RateLimitError, BadRequestError
 
+# --- GOOGLE INDEXING LIBS ---
+from oauth2client.service_account import ServiceAccountCredentials
+from googleapiclient.discovery import build
+
 # --- CONFIGURATION ---
 GROQ_KEYS_RAW = os.environ.get("GROQ_API_KEY", "")
 GROQ_API_KEYS = [k.strip() for k in GROQ_KEYS_RAW.split(",") if k.strip()]
+
+# 🟢 CONFIG DOMAIN ANDA (WAJIB DIGANTI)
+WEBSITE_URL = "https://www.soccerdaily.com" # Ganti dengan domain Anda
+INDEXNOW_KEY = os.environ.get("INDEXNOW_KEY", "") # Simpan key indexnow di Env/Secrets
+GOOGLE_JSON_KEY = os.environ.get("GOOGLE_INDEXING_KEY", "") # Simpan isi file JSON di Env/Secrets
 
 if not GROQ_API_KEYS:
     print("❌ FATAL ERROR: Groq API Key is missing!")
@@ -35,13 +44,13 @@ AUTHORITY_SOURCES = [
     "WhoScored", "BBC Sport", "The Guardian", "UEFA Official", "ESPN FC"
 ]
 
-# --- FALLBACK IMAGES (JIKA POLLINATIONS TETAP GAGAL) ---
+# --- FALLBACK IMAGES ---
 FALLBACK_IMAGES = [
-    "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80", # Stadium
-    "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80", # Ball grass
-    "https://images.unsplash.com/photo-1556056504-5c7696c4c28d?auto=format&fit=crop&w=1200&q=80", # Fans
-    "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=1200&q=80", # Ball generic
-    "https://images.unsplash.com/photo-1522778119026-d647f0565c6a?auto=format&fit=crop&w=1200&q=80"  # Goal Net
+    "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1556056504-5c7696c4c28d?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1522778119026-d647f0565c6a?auto=format&fit=crop&w=1200&q=80"
 ]
 
 CONTENT_DIR = "content/articles"
@@ -97,22 +106,18 @@ def clean_text(text):
     cleaned = cleaned.strip()
     return cleaned
 
-# --- IMAGE ENGINE (OPTIMIZED TIMEOUT & SEED) ---
+# --- IMAGE ENGINE (FLUX REALISM - ROBUST) ---
 def download_and_optimize_image(query, filename):
-    # Membersihkan query dan menambahkan konteks sepakbola
     base_prompt = f"{query} football match atmosphere 4k realistic"
     safe_prompt = base_prompt.replace(" ", "%20")[:200]
     
     print(f"      🎨 Generating Image: {base_prompt[:40]}...")
 
     for attempt in range(3):
-        # Tambahkan seed acak agar jika retry, server menganggap ini request baru (bukan cache)
         seed = random.randint(1, 999999)
         image_url = f"https://image.pollinations.ai/prompt/{safe_prompt}?width=1280&height=720&nologo=true&model=flux-realism&seed={seed}"
         
         try:
-            # TIMEOUT DITINGKATKAN KE 120 DETIK (2 MENIT)
-            # Ini akan mengurangi error "Read timed out" secara signifikan
             response = requests.get(image_url, timeout=120)
             
             if response.status_code == 200:
@@ -134,10 +139,52 @@ def download_and_optimize_image(query, filename):
 
         except Exception as e:
             print(f"      ⚠️ Image fail (Attempt {attempt+1}): {e}")
-            time.sleep(5) # Jeda 5 detik sebelum mencoba lagi
+            time.sleep(5)
     
     print("      ❌ Image failed after 3 attempts. Using Fallback.")
     return random.choice(FALLBACK_IMAGES)
+
+# --- INDEXING ENGINE (GOOGLE & INDEXNOW) ---
+
+def submit_to_google(url):
+    if not GOOGLE_JSON_KEY:
+        print("      ⚠️ Google Indexing Skipped: No JSON Key found.")
+        return
+
+    try:
+        # Load credentials from ENV String
+        creds_dict = json.loads(GOOGLE_JSON_KEY)
+        SCOPES = ["https://www.googleapis.com/auth/indexing"]
+        credentials = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, SCOPES)
+        service = build("indexing", "v3", credentials=credentials)
+
+        body = {"url": url, "type": "URL_UPDATED"}
+        service.urlNotifications().publish(body=body).execute()
+        print(f"      🚀 Google Indexing Submitted: {url}")
+    except Exception as e:
+        print(f"      ⚠️ Google Indexing Error: {e}")
+
+def submit_to_indexnow(url):
+    if not INDEXNOW_KEY:
+        print("      ⚠️ IndexNow Skipped: No Key found.")
+        return
+
+    try:
+        endpoint = "https://api.indexnow.org/indexnow"
+        data = {
+            "host": WEBSITE_URL.replace("https://", "").replace("http://", ""),
+            "key": INDEXNOW_KEY,
+            "keyLocation": f"{WEBSITE_URL}/{INDEXNOW_KEY}.txt",
+            "urlList": [url]
+        }
+        headers = {'Content-Type': 'application/json; charset=utf-8'}
+        response = requests.post(endpoint, json=data, headers=headers)
+        if response.status_code == 200:
+            print(f"      🚀 IndexNow Submitted: {url}")
+        else:
+            print(f"      ⚠️ IndexNow Failed: {response.status_code}")
+    except Exception as e:
+        print(f"      ⚠️ IndexNow Error: {e}")
 
 # --- AI WRITER ENGINE ---
 def parse_ai_response(text, fallback_title, fallback_desc):
@@ -312,6 +359,13 @@ draft: false
             print(f"   ✅ Published: {filename}")
             cat_success_count += 1
             total_generated += 1
+            
+            # --- AUTO INDEXING TRIGGER ---
+            # Mengirim URL ke Google dan Bing/Yandex
+            full_article_url = f"{WEBSITE_URL}/{slug}/"
+            print(f"   🚀 Submitting for Indexing: {full_article_url}")
+            submit_to_google(full_article_url)
+            submit_to_indexnow(full_article_url)
             
             time.sleep(5)
 
