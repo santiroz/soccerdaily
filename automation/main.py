@@ -19,10 +19,15 @@ from googleapiclient.discovery import build
 GROQ_KEYS_RAW = os.environ.get("GROQ_API_KEY", "")
 GROQ_API_KEYS = [k.strip() for k in GROQ_KEYS_RAW.split(",") if k.strip()]
 
-# 🟢 CONFIG DOMAIN ANDA (WAJIB DIGANTI)
-WEBSITE_URL = "https://www.soccerdaily.com" # Ganti dengan domain Anda
-INDEXNOW_KEY = os.environ.get("INDEXNOW_KEY", "") # Simpan key indexnow di Env/Secrets
-GOOGLE_JSON_KEY = os.environ.get("GOOGLE_INDEXING_KEY", "") # Simpan isi file JSON di Env/Secrets
+# 🟢 CONFIGURASI DOMAIN & INDEXNOW (SESUAIKAN INI)
+# Ganti dengan domain asli Anda (tanpa garis miring di akhir)
+WEBSITE_URL = "https://www.namawebsiteanda.com" 
+
+# Key IndexNow yang Anda dapatkan tadi
+INDEXNOW_KEY = "b3317ae5f84348fa8c96528a43ab2655" 
+
+# Google JSON Key (Dari Secrets GitHub)
+GOOGLE_JSON_KEY = os.environ.get("GOOGLE_INDEXING_KEY", "") 
 
 if not GROQ_API_KEYS:
     print("❌ FATAL ERROR: Groq API Key is missing!")
@@ -152,7 +157,6 @@ def submit_to_google(url):
         return
 
     try:
-        # Load credentials from ENV String
         creds_dict = json.loads(GOOGLE_JSON_KEY)
         SCOPES = ["https://www.googleapis.com/auth/indexing"]
         credentials = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, SCOPES)
@@ -165,24 +169,31 @@ def submit_to_google(url):
         print(f"      ⚠️ Google Indexing Error: {e}")
 
 def submit_to_indexnow(url):
-    if not INDEXNOW_KEY:
-        print("      ⚠️ IndexNow Skipped: No Key found.")
+    # Validasi apakah URL website sudah diisi user
+    if "namawebsiteanda" in WEBSITE_URL:
+        print("      ⚠️ IndexNow Skipped: WEBSITE_URL belum diganti.")
         return
 
     try:
         endpoint = "https://api.indexnow.org/indexnow"
+        
+        # Membersihkan format host (menghilangkan https://)
+        host = WEBSITE_URL.replace("https://", "").replace("http://", "")
+        
         data = {
-            "host": WEBSITE_URL.replace("https://", "").replace("http://", ""),
+            "host": host,
             "key": INDEXNOW_KEY,
-            "keyLocation": f"{WEBSITE_URL}/{INDEXNOW_KEY}.txt",
+            "keyLocation": f"https://{host}/{INDEXNOW_KEY}.txt",
             "urlList": [url]
         }
+        
         headers = {'Content-Type': 'application/json; charset=utf-8'}
         response = requests.post(endpoint, json=data, headers=headers)
+        
         if response.status_code == 200:
             print(f"      🚀 IndexNow Submitted: {url}")
         else:
-            print(f"      ⚠️ IndexNow Failed: {response.status_code}")
+            print(f"      ⚠️ IndexNow Failed: {response.status_code} - {response.text}")
     except Exception as e:
         print(f"      ⚠️ IndexNow Error: {e}")
 
@@ -361,11 +372,14 @@ draft: false
             total_generated += 1
             
             # --- AUTO INDEXING TRIGGER ---
-            # Mengirim URL ke Google dan Bing/Yandex
             full_article_url = f"{WEBSITE_URL}/{slug}/"
             print(f"   🚀 Submitting for Indexing: {full_article_url}")
-            submit_to_google(full_article_url)
+            
+            # Kirim ke IndexNow (Bing, Yandex, dll)
             submit_to_indexnow(full_article_url)
+            
+            # Kirim ke Google
+            submit_to_google(full_article_url)
             
             time.sleep(5)
 
