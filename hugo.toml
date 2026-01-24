@@ -3,17 +3,16 @@ languageCode = "en-us"
 title = "Soccer Daily"
 canonifyURLs = true
 
-# 1. PERMALINKS
+# --- PERMALINKS ---
 [permalinks]
   articles = '/:slug/'
 
-# 2. MARKUP (Agar HTML di Markdown aman)
-[markup]
-  [markup.goldmark]
-    [markup.goldmark.renderer]
-      unsafe = true
+# --- MARKUP SETTINGS ---
+# Kita gunakan dot-notation agar lebih ringkas dan aman
+[markup.goldmark.renderer]
+  unsafe = true
 
-# 3. OUTPUTS (Wajib ada RSS & Sitemap)
+# --- OUTPUTS ---
 [outputs]
   home = ["HTML", "RSS", "Sitemap"]
   page = ["HTML"]
@@ -21,25 +20,19 @@ canonifyURLs = true
   taxonomy = ["HTML", "RSS"]
   term = ["HTML", "RSS"]
 
-# 4. SERVICES (Limit RSS)
-[services]
-  [services.rss]
-    limit = 50
+# --- SERVICES ---
+[services.rss]
+  limit = 50
 
-# 5. TAXONOMIES
+# --- TAXONOMIES ---
 [taxonomies]
   category = "categories"
   tag = "tags"
 
-# ==================================================
-# 6. PARAMETERS (SATUKAN SEMUA DI SINI!)
-# PENTING: Bagian ini harus ada di paling bawah
-# ==================================================
+# --- PARAMETERS (Bagian ini paling bawah) ---
 [params]
   description = "Breaking Football News, Transfer Updates, and Tactical Analysis."
   defaultImage = "/images/default-football.jpg"
-
-  # Author adalah ANAK dari params, jadi tulis di bawahnya
-  [params.author]
-    name = "Soccer Daily Team"
-    email = "contact@soccerdaily.com"
+  
+  # SOLUSI ANTI ERROR: Definisi Author dalam satu baris (Inline)
+  author = { name = "Soccer Daily Team", email = "contact@soccerdaily.com" }
