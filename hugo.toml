@@ -26,6 +26,9 @@ canonifyURLs = true
   taxonomy = ["HTML", "RSS"]
   term = ["HTML", "RSS"]
 
+[services.rss]
+  limit = 20
+  
 [taxonomies]
   category = "categories"
   tag = "tags"
