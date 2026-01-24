@@ -3,16 +3,11 @@ languageCode = "en-us"
 title = "Soccer Daily"
 canonifyURLs = true
 
-# --- PERMALINKS ---
+# --- 1. PERMALINKS ---
 [permalinks]
   articles = '/:slug/'
 
-# --- MARKUP SETTINGS ---
-# Kita gunakan dot-notation agar lebih ringkas dan aman
-[markup.goldmark.renderer]
-  unsafe = true
-
-# --- OUTPUTS ---
+# --- 2. OUTPUTS ---
 [outputs]
   home = ["HTML", "RSS", "Sitemap"]
   page = ["HTML"]
@@ -20,19 +15,26 @@ canonifyURLs = true
   taxonomy = ["HTML", "RSS"]
   term = ["HTML", "RSS"]
 
-# --- SERVICES ---
-[services.rss]
-  limit = 50
-
-# --- TAXONOMIES ---
+# --- 3. TAXONOMIES ---
 [taxonomies]
   category = "categories"
   tag = "tags"
 
-# --- PARAMETERS (Bagian ini paling bawah) ---
+# --- 4. MARKUP SETTINGS (Explicit) ---
+[markup]
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
+
+# --- 5. SERVICES (Explicit) ---
+[services]
+  [services.rss]
+    limit = 50
+
+# --- 6. PARAMETERS (WAJIB DI PALING BAWAH) ---
 [params]
   description = "Breaking Football News, Transfer Updates, and Tactical Analysis."
   defaultImage = "/images/default-football.jpg"
   
-  # SOLUSI ANTI ERROR: Definisi Author dalam satu baris (Inline)
+  # Penulisan Author menggunakan Inline Table (Paling Aman)
   author = { name = "Soccer Daily Team", email = "contact@soccerdaily.com" }
