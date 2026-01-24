@@ -1,114 +1,86 @@
-<header class="bg-gray-900 border-b-4 border-red-600 sticky top-0 z-50 shadow-2xl">
+<header class="bg-gray-900 border-b-4 border-red-600 sticky top-0 z-50">
     
-    <!-- Top Bar -->
+    <!-- Top Bar (Simple) -->
     <div class="bg-black text-gray-400 text-[10px] py-1 hidden md:block border-b border-gray-800">
         <div class="container mx-auto px-4 flex justify-between">
-            <time datetime="{{ now.Format "2006-01-02" }}">{{ now.Format "Monday, January 2, 2006" }}</time>
-            <span class="tracking-wider font-bold">SOCCER DAILY OFFICIAL</span>
+            <span>{{ now.Format "Mon, Jan 02, 2006" }}</span>
+            <span class="font-bold tracking-wider">SOCCER DAILY</span>
         </div>
     </div>
 
-    <!-- Main Header Container -->
-    <div class="container mx-auto px-4 h-20 flex items-center justify-between relative bg-gray-900 z-50">
+    <!-- Main Header -->
+    <div class="container mx-auto px-4 h-16 md:h-20 flex items-center justify-between relative bg-gray-900">
         
-        <!-- 1. LOGO -->
-        <a href="/" aria-label="Soccer Daily Homepage" class="flex items-center group shrink-0">
-            <div class="w-9 h-9 rounded-full border-[3px] border-white flex items-center justify-center mr-2 group-hover:border-red-500 transition duration-300">
-                <div class="w-3 h-3 bg-white rounded-full group-hover:bg-red-500 transition duration-300"></div>
+        <!-- Logo -->
+        <a href="/" class="flex items-center gap-2 group shrink-0" aria-label="Homepage">
+            <div class="w-8 h-8 rounded-full border-2 border-white flex items-center justify-center group-hover:border-red-600 transition">
+                <div class="w-2 h-2 bg-white rounded-full group-hover:bg-red-600 transition"></div>
             </div>
-            <span class="font-display font-black text-xl md:text-2xl tracking-tighter text-white">
-                Soccer<span class="font-light text-gray-300">DAILY</span>
+            <span class="font-display font-black text-xl tracking-tighter text-white">
+                Soccer<span class="font-light text-gray-400">DAILY</span>
             </span>
         </a>
 
-        <!-- 2. DESKTOP NAVIGATION (UL/LI With Dropdown) -->
-        <nav aria-label="Desktop Navigation" class="hidden lg:block">
-            <ul class="flex items-center gap-8">
-                <!-- Home -->
-                <li>
-                    <a href="/" class="font-display font-bold text-sm text-gray-300 hover:text-white uppercase tracking-wider transition-colors py-6 block">
-                        Home
-                    </a>
-                </li>
+        <!-- Desktop Menu (Optimized Dropdown) -->
+        <nav class="hidden lg:flex items-center gap-6">
+            <a href="/" class="text-sm font-bold text-gray-300 hover:text-white uppercase tracking-wide transition">Home</a>
 
-                <!-- DROPDOWN 1: COMPETITIONS -->
-                <li class="group relative">
-                    <a href="#" class="flex items-center gap-1 font-display font-bold text-sm text-gray-300 hover:text-white uppercase tracking-wider transition-colors py-6 cursor-pointer">
-                        Competitions
-                        <svg class="w-3 h-3 text-gray-500 group-hover:text-white transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                    </a>
-                    <!-- Dropdown Content -->
-                    <ul class="absolute left-0 top-full w-48 bg-gray-900 border-t-2 border-red-600 shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
-                        <li><a href="/categories/premier-league" class="block px-4 py-3 text-xs font-bold text-gray-300 hover:text-white hover:bg-gray-800 border-b border-gray-800">Premier League</a></li>
-                        <li><a href="/categories/champions-league" class="block px-4 py-3 text-xs font-bold text-gray-300 hover:text-white hover:bg-gray-800 border-b border-gray-800">Champions League</a></li>
-                        <li><a href="/categories/la-liga" class="block px-4 py-3 text-xs font-bold text-gray-300 hover:text-white hover:bg-gray-800">La Liga</a></li>
-                    </ul>
-                </li>
+            <!-- Dropdown: Competitions -->
+            <div class="relative group py-6">
+                <button class="flex items-center gap-1 text-sm font-bold text-gray-300 group-hover:text-white uppercase tracking-wide cursor-pointer focus:outline-none">
+                    Leagues <span class="text-[10px]">▼</span>
+                </button>
+                <div class="absolute left-0 top-full w-48 bg-gray-900 border-t-2 border-red-600 shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-1 group-hover:translate-y-0">
+                    <a href="/categories/premier-league" class="block px-4 py-3 text-xs font-bold text-gray-400 hover:text-white hover:bg-gray-800 border-b border-gray-800">Premier League</a>
+                    <a href="/categories/champions-league" class="block px-4 py-3 text-xs font-bold text-gray-400 hover:text-white hover:bg-gray-800 border-b border-gray-800">Champions League</a>
+                    <a href="/categories/la-liga" class="block px-4 py-3 text-xs font-bold text-gray-400 hover:text-white hover:bg-gray-800">La Liga</a>
+                </div>
+            </div>
 
-                <!-- DROPDOWN 2: NEWS -->
-                <li class="group relative">
-                    <a href="#" class="flex items-center gap-1 font-display font-bold text-sm text-gray-300 hover:text-white uppercase tracking-wider transition-colors py-6 cursor-pointer">
-                        News & Updates
-                        <svg class="w-3 h-3 text-gray-500 group-hover:text-white transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                    </a>
-                    <ul class="absolute left-0 top-full w-48 bg-gray-900 border-t-2 border-red-600 shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
-                        <li><a href="/categories/transfer-news" class="block px-4 py-3 text-xs font-bold text-gray-300 hover:text-white hover:bg-gray-800 border-b border-gray-800">Transfer Market</a></li>
-                        <li><a href="/categories/international" class="block px-4 py-3 text-xs font-bold text-gray-300 hover:text-white hover:bg-gray-800">International</a></li>
-                    </ul>
-                </li>
+            <!-- Dropdown: News -->
+            <div class="relative group py-6">
+                <button class="flex items-center gap-1 text-sm font-bold text-gray-300 group-hover:text-white uppercase tracking-wide cursor-pointer focus:outline-none">
+                    News <span class="text-[10px]">▼</span>
+                </button>
+                <div class="absolute left-0 top-full w-48 bg-gray-900 border-t-2 border-red-600 shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-1 group-hover:translate-y-0">
+                    <a href="/categories/transfer-news" class="block px-4 py-3 text-xs font-bold text-gray-400 hover:text-white hover:bg-gray-800 border-b border-gray-800">Transfer News</a>
+                    <a href="/categories/international" class="block px-4 py-3 text-xs font-bold text-gray-400 hover:text-white hover:bg-gray-800">International</a>
+                </div>
+            </div>
 
-                <!-- Direct Link -->
-                <li>
-                    <a href="/categories/tactical-analysis" class="font-display font-bold text-sm text-gray-300 hover:text-white uppercase tracking-wider transition-colors py-6 block relative group">
-                        Tactical Analysis
-                        <span class="absolute bottom-5 left-0 w-0 h-0.5 bg-red-600 transition-all duration-300 group-hover:w-full"></span>
-                    </a>
-                </li>
-            </ul>
+            <a href="/categories/tactical-analysis" class="text-sm font-bold text-gray-300 hover:text-white uppercase tracking-wide transition">Analysis</a>
         </nav>
 
-        <!-- 3. RIGHT SIDE -->
+        <!-- Right Side -->
         <div class="flex items-center gap-4">
-            <a href="https://wwp.ailooe.com/redirect-zone/058f7788" target="_blank" rel="nofollow noopener noreferrer" aria-label="Watch Live Football Streaming" class="group relative flex items-center gap-2 md:gap-3 bg-white px-3 md:px-5 py-1.5 md:py-2 rounded-full transition-all duration-300 hover:bg-red-600 hover:shadow-[0_0_15px_rgba(220,38,38,0.7)]">
-                <span class="relative flex h-2.5 w-2.5 md:h-3 md:w-3">
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-600 opacity-75 group-hover:bg-white"></span>
-                  <span class="relative inline-flex rounded-full h-full w-full bg-red-600 group-hover:bg-white"></span>
-                </span>
-                <span class="text-[10px] md:text-xs font-black uppercase tracking-widest text-gray-900 group-hover:text-white transition-colors">Live</span>
+            <a href="https://wwp.ailooe.com/redirect-zone/058f7788" target="_blank" rel="nofollow noopener noreferrer" class="bg-white px-4 py-1 rounded-full text-xs font-black uppercase text-gray-900 hover:bg-red-600 hover:text-white transition shadow-lg flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span> Live
             </a>
-
-            <button id="mobile-menu-btn" aria-label="Toggle mobile menu" class="lg:hidden text-white focus:outline-none p-1 hover:text-red-500 transition">
-                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+            
+            <!-- Mobile Toggle -->
+            <button id="mobile-menu-btn" aria-label="Menu" class="lg:hidden text-white focus:outline-none">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
             </button>
         </div>
     </div>
 
-    <!-- 4. MOBILE MENU (Updated Structure) -->
-    <div id="mobile-menu" class="hidden absolute top-20 left-0 w-full bg-gray-900 border-t border-gray-800 border-b-4 border-red-600 shadow-xl lg:hidden z-40 transition-all duration-300">
-        <ul class="flex flex-col p-4 space-y-1">
-            <li><a href="/" class="block px-4 py-3 text-sm font-bold text-white hover:bg-gray-800 rounded uppercase">Home</a></li>
-            
-            <!-- Mobile Grouping -->
-            <li class="px-4 pt-4 pb-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Competitions</li>
-            <li><a href="/categories/premier-league" class="block px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-800 rounded">Premier League</a></li>
-            <li><a href="/categories/champions-league" class="block px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-800 rounded">Champions League</a></li>
-            <li><a href="/categories/la-liga" class="block px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-800 rounded">La Liga</a></li>
-
-            <li class="px-4 pt-4 pb-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Analysis & News</li>
-            <li><a href="/categories/transfer-news" class="block px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-800 rounded">Transfer News</a></li>
-            <li><a href="/categories/tactical-analysis" class="block px-4 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-800 rounded">Tactical Analysis</a></li>
-        </ul>
+    <!-- Mobile Menu (Hidden by default using style to prevent FOUC) -->
+    <div id="mobile-menu" class="hidden lg:hidden bg-gray-900 border-t border-gray-800">
+        <nav class="flex flex-col p-4 space-y-1">
+            <a href="/" class="block px-4 py-2 text-sm font-bold text-white uppercase">Home</a>
+            <div class="px-4 py-2 text-[10px] font-bold text-gray-500 uppercase">Leagues</div>
+            <a href="/categories/premier-league" class="block px-6 py-2 text-sm text-gray-400 hover:text-white">Premier League</a>
+            <a href="/categories/champions-league" class="block px-6 py-2 text-sm text-gray-400 hover:text-white">Champions League</a>
+            <div class="px-4 py-2 text-[10px] font-bold text-gray-500 uppercase">Updates</div>
+            <a href="/categories/transfer-news" class="block px-6 py-2 text-sm text-gray-400 hover:text-white">Transfers</a>
+            <a href="/categories/tactical-analysis" class="block px-6 py-2 text-sm text-gray-400 hover:text-white">Analysis</a>
+        </nav>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const btn = document.getElementById('mobile-menu-btn');
-            const menu = document.getElementById('mobile-menu');
-            if(btn && menu) {
-                btn.addEventListener('click', function() {
-                    menu.classList.toggle('hidden');
-                });
-            }
+        // Simple Vanilla JS toggle
+        document.getElementById('mobile-menu-btn').addEventListener('click', function() {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
         });
     </script>
 </header>
