@@ -1,7 +1,6 @@
 baseURL = "https://soccerdaily-alpha.vercel.app/"
 languageCode = "en-us"
-title = "US Daily Context"
-# theme = "neo-news"
+title = "Soccer Daily"  # <--- GANTI INI (Sebelumnya US Daily Context)
 canonifyURLs = true
 
 [permalinks]
@@ -9,7 +8,7 @@ canonifyURLs = true
   articles = '/:slug/'
   
 [params.author]
-  name = "Dave Harsya (Senior Analyst)"
+  name = "Soccer Daily Team"
   email = "contact@soccerdaily.com"
 
 [markup]
@@ -17,10 +16,10 @@ canonifyURLs = true
     [markup.goldmark.renderer]
       unsafe = true
 
-  
-# --- BAGIAN INI SANGAT PENTING ---
+# --- OUTPUT CONFIGURATION ---
+# Pastikan RSS dan Sitemap ter-generate
 [outputs]
-  home = ["HTML", "RSS","Sitemap"]    # HTML Wajib di urutan pertama!
+  home = ["HTML", "RSS", "Sitemap"]
   page = ["HTML"]
   section = ["HTML", "RSS"]
   taxonomy = ["HTML", "RSS"]
@@ -28,12 +27,14 @@ canonifyURLs = true
 
 [services]
   [services.rss]
-    limit = 50 
-  
+    limit = 50  # Standar Google News
+
 [taxonomies]
   category = "categories"
   tag = "tags"
 
 [params]
-  description = "AI-Powered Journalism covering US Top Stories."
-  defaultImage = "/images/default-news.jpg"
+  # <--- GANTI DESKRIPSI AGAR RELEVAN DENGAN BOLA
+  description = "Breaking Football News, Transfer Updates, and Tactical Analysis."
+  
+  # <--- GANTI NAMA FILE AGAR SESUAI DENGAN META TAG DI HTML SEBELU
