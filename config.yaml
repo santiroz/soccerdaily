@@ -1,0 +1,44 @@
+baseURL: "https://soccerdaily-alpha.vercel.app/"
+languageCode: "en-us"
+title: "Soccer Daily"
+canonifyURLs: true
+
+permalinks:
+  articles: "/:slug/"
+
+markup:
+  goldmark:
+    renderer:
+      unsafe: true
+
+outputs:
+  home:
+    - HTML
+    - RSS
+    - Sitemap
+  page:
+    - HTML
+  section:
+    - HTML
+    - RSS
+  taxonomy:
+    - HTML
+    - RSS
+  term:
+    - HTML
+    - RSS
+
+services:
+  rss:
+    limit: 50
+
+taxonomies:
+  category: "categories"
+  tag: "tags"
+
+params:
+  description: "Breaking Football News, Transfer Updates, and Tactical Analysis."
+  defaultImage: "/images/default-football.jpg"
+  author:
+    name: "Soccer Daily Team"
+    email: "contact@soccerdaily.com"
