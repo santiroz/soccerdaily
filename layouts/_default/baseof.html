@@ -5,28 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     
-    <!-- =======================================================
-         1. PERFORMANCE BOOSTERS (CRITICAL PATH)
-         ======================================================= -->
-    <!-- Preconnect ke server CDN agar koneksi terbuka duluan -->
+    <!-- 1. PRECONNECT (Performance) -->
     <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="dns-prefetch" href="https://s10.histats.com">
-
-    <!-- PRELOAD TAILWIND (SOLUSI RENDER BLOCKING) -->
-    <!-- Memaksa browser download script ini SEKARANG JUGA (High Priority) -->
     <link rel="preload" href="https://cdn.tailwindcss.com?plugins=typography,line-clamp" as="script">
 
-    <!-- 2. METADATA -->
-    <title>{{ if .IsHome }}{{ .Site.Title }} - Breaking Football News & Scores{{ else }}{{ .Title }} | {{ .Site.Title }}{{ end }}</title>
-    <meta name="description" content="{{ if .IsPage }}{{ .Params.description | default .Summary }}{{ else }}{{ .Site.Params.description }}{{ end }}">
+    <!-- 2. SEO TITLE (LOGIC DIPERBAIKI) -->
+    <!-- Jika Homepage: "Soccer Daily - Slogan" -->
+    <!-- Jika Artikel: "Judul Artikel | Soccer Daily" -->
+    <title>
+        {{ if .IsHome }}
+            {{ .Site.Title }} - Breaking Football News, Transfers & Tactical Analysis
+        {{ else }}
+            {{ .Title }} | {{ .Site.Title }}
+        {{ end }}
+    </title>
+
+    <!-- 3. META DESCRIPTION (Anti-Snippet Acak) -->
+    <meta name="description" content="{{ if .IsHome }}{{ .Site.Params.description }}{{ else }}{{ .Params.description | default .Summary }}{{ end }}">
+
     <link rel="canonical" href="{{ .Permalink }}">
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
     <meta name="theme-color" content="#111827">
 
-    <!-- 3. TAILWIND CSS -->
-    <!-- Load script setelah preload -->
+    <!-- 4. TAILWIND & FONTS -->
     <script src="https://cdn.tailwindcss.com?plugins=typography,line-clamp"></script>
     <script>
         tailwind.config = {
@@ -40,54 +44,62 @@
             }
         }
     </script>
-
-    <!-- 4. GOOGLE FONTS (Non-Blocking Strategy) -->
     <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@300;400;500;700;900&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-    <noscript>
-        <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@300;400;500;700;900&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-    </noscript>
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@300;400;500;700;900&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet"></noscript>
 
-    <!-- =======================================================
-         5. OPEN GRAPH & META TAGS
-         ======================================================= -->
+    <!-- 5. OPEN GRAPH (Media Sosial) -->
     <meta property="og:locale" content="{{ .Site.LanguageCode | default "en_GB" }}">
     <meta property="og:site_name" content="{{ .Site.Title }}">
     <meta property="og:type" content="{{ if .IsPage }}article{{ else }}website{{ end }}">
-    <meta property="og:title" content="{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ .Title }}{{ end }}">
-    <meta property="og:description" content="{{ if .IsPage }}{{ .Params.description | default .Summary }}{{ else }}{{ .Site.Params.description }}{{ end }}">
+    <meta property="og:title" content="{{ if .IsHome }}{{ .Site.Title }} - Football News & Analysis{{ else }}{{ .Title }}{{ end }}">
+    <meta property="og:description" content="{{ if .IsHome }}{{ .Site.Params.description }}{{ else }}{{ .Params.description | default .Summary }}{{ end }}">
     <meta property="og:url" content="{{ .Permalink }}">
     
     {{ if .Params.featured_image }}
     <meta property="og:image" content="{{ .Params.featured_image | absURL }}">
-    <meta property="og:image:secure_url" content="{{ .Params.featured_image | absURL }}">
     <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
-    <meta property="og:image:alt" content="{{ .Params.featured_image_alt | default .Title }}">
+    <meta property="og:image:height" content="675">
     {{ else }}
     <meta property="og:image" content="{{ "images/default-football.jpg" | absURL }}">
     {{ end }}
 
-    {{ if .IsPage }}
-    <meta property="article:published_time" content="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}">
-    <meta property="article:modified_time" content="{{ .Lastmod.Format "2006-01-02T15:04:05Z07:00" }}">
-    {{ with .Params.categories }}
-    <meta property="article:section" content="{{ index . 0 }}">
-    {{ end }}
-    {{ range .Params.tags }}
-    <meta property="article:tag" content="{{ . }}">
-    {{ end }}
-    {{ end }}
-
+    <!-- 6. TWITTER CARDS -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ .Title }}">
-    <meta name="twitter:description" content="{{ if .IsPage }}{{ .Params.description | default .Summary }}{{ else }}{{ .Site.Params.description }}{{ end }}">
+    <meta name="twitter:description" content="{{ if .IsHome }}{{ .Site.Params.description }}{{ else }}{{ .Params.description | default .Summary }}{{ end }}">
     {{ if .Params.featured_image }}
     <meta name="twitter:image" content="{{ .Params.featured_image | absURL }}">
     {{ else }}
     <meta name="twitter:image" content="{{ "images/default-football.jpg" | absURL }}">
     {{ end }}
-    <meta name="twitter:domain" content="{{ replaceRE "^https?://([^/]+).*" "$1" .Site.BaseURL }}">
 
+    <!-- =======================================================
+         7. SCHEMA.ORG (RAHASIA GOOGLE MENGENALI BRAND)
+         ======================================================= -->
+    
+    <!-- A. Schema Khusus Homepage (WebSite) -->
+    {{ if .IsHome }}
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Soccer Daily",
+      "alternateName": ["SoccerDaily", "Soccer Daily News"],
+      "url": "{{ .Site.BaseURL }}",
+      "description": "{{ .Site.Params.description }}",
+      "publisher": {
+        "@type": "Organization",
+        "name": "Soccer Daily",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "{{ "favicon.svg" | absURL }}"
+        }
+      }
+    }
+    </script>
+    {{ end }}
+
+    <!-- B. Schema Khusus Artikel (NewsArticle) -->
     {{ if .IsPage }}
     <script type="application/ld+json">
     {
@@ -103,7 +115,7 @@
       "dateModified": "{{ .Lastmod.Format "2006-01-02T15:04:05Z07:00" }}",
       "author": {
         "@type": "Person",
-        "name": "{{ .Params.author | default "Soccer Daily Analyst" }}"
+        "name": "{{ .Params.author | default "Soccer Daily Team" }}"
       },
       "publisher": {
         "@type": "Organization",
