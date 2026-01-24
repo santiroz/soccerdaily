@@ -1,3 +1,4 @@
+{{- printf "<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"yes\"?>" | safeHTML }}
 <rss version="2.0" 
      xmlns:content="http://purl.org/rss/1.0/modules/content/" 
      xmlns:wfw="http://wellformedweb.org/CommentAPI/" 
@@ -13,10 +14,9 @@
     <language>{{ .Site.LanguageCode }}</language>
     <lastBuildDate>{{ .Date.Format "Mon, 02 Jan 2006 15:04:05 -0700" | safeHTML }}</lastBuildDate>
     {{ with .OutputFormats.Get "RSS" }}
-        <atom:link href="{{ .Permalink }}" rel="self" type="application/rss+xml" />
+        {{ printf "<atom:link href=%q rel=\"self\" type=%q />" .Permalink .MediaType | safeHTML }}
     {{ end }}
     
-    <!-- Loop Artikel (Hanya dari Section 'articles') -->
     {{ $pages := where .Site.RegularPages "Section" "articles" }}
     {{ $limit := .Site.Config.Services.RSS.Limit }}
     {{ range first $limit $pages }}
@@ -24,29 +24,17 @@
       <title>{{ .Title }}</title>
       <link>{{ .Permalink }}</link>
       <pubDate>{{ .Date.Format "Mon, 02 Jan 2006 15:04:05 -0700" | safeHTML }}</pubDate>
-      
-      <!-- Author -->
-      <dc:creator><![CDATA[{{ .Params.author | default "Soccer Daily Team" }}]]></dc:creator>
-      
-      <!-- Categories -->
-      {{ range .Params.categories }}
-      <category><![CDATA[{{ . }}]]></category>
-      {{ end }}
-      
+      <dc:creator>{{ .Params.author | default "Soccer Daily Team" }}</dc:creator>
       <guid isPermaLink="true">{{ .Permalink }}</guid>
       
-      <!-- Deskripsi Singkat -->
-      <description><![CDATA[{{ .Summary | html }}]]></description>
+      <description>{{ .Summary | html }}</description>
       
-      <!-- Konten Lengkap (Wajib untuk Google News) -->
-      <content:encoded><![CDATA[{{ .Content | html }}]]></content:encoded>
+      <!-- INI PERBAIKANNYA: Menggunakan printf agar CDATA valid -->
+      <content:encoded>{{ printf "<![CDATA[%s]]>" .Content | safeHTML }}</content:encoded>
       
-      <!-- Gambar Utama (Media Content - Wajib agar gambar muncul di Feedly/Discover) -->
       {{ if .Params.featured_image }}
       <media:content url="{{ .Params.featured_image | absURL }}" medium="image" />
-      <enclosure url="{{ .Params.featured_image | absURL }}" type="image/webp" />
       {{ end }}
-      
     </item>
     {{ end }}
   </channel>
