@@ -5,26 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     
-    <!-- 1. PRECONNECT (Performance) -->
+    <!-- 1. PRECONNECT & PRELOAD (CRITICAL PERFORMANCE) -->
     <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="dns-prefetch" href="https://s10.histats.com">
+    <!-- Preload Tailwind Script agar tidak render blocking -->
     <link rel="preload" href="https://cdn.tailwindcss.com?plugins=typography,line-clamp" as="script">
 
-    <!-- 2. SEO TITLE (LOGIC DIPERBAIKI) -->
-    <!-- Jika Homepage: "Soccer Daily - Slogan" -->
-    <!-- Jika Artikel: "Judul Artikel | Soccer Daily" -->
-    <title>
-        {{ if .IsHome }}
-            {{ .Site.Title }} - Breaking Football News, Transfers & Tactical Analysis
-        {{ else }}
-            {{ .Title }} | {{ .Site.Title }}
-        {{ end }}
-    </title>
+    <!-- 2. SEO TITLE (Rapi tanpa Spasi Berlebih) -->
+    <title>{{ if .IsHome }}{{ .Site.Title }} - Breaking Football News, Transfers & Tactical Analysis{{ else }}{{ .Title }} | {{ .Site.Title }}{{ end }}</title>
 
-    <!-- 3. META DESCRIPTION (Anti-Snippet Acak) -->
-    <meta name="description" content="{{ if .IsHome }}{{ .Site.Params.description }}{{ else }}{{ .Params.description | default .Summary }}{{ end }}">
+    <!-- 3. META DESCRIPTION (SAFE MODE) -->
+    <!-- 'plainify' membuang tag HTML, 'htmlUnescape' membersihkan karakter aneh -->
+    <meta name="description" content="{{ if .IsHome }}{{ .Site.Params.description }}{{ else }}{{ .Params.description | default .Summary | plainify | htmlUnescape }}{{ end }}">
 
     <link rel="canonical" href="{{ .Permalink }}">
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
@@ -47,12 +41,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@300;400;500;700;900&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
     <noscript><link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@300;400;500;700;900&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet"></noscript>
 
-    <!-- 5. OPEN GRAPH (Media Sosial) -->
+    <!-- 5. OPEN GRAPH (FB/WA) -->
     <meta property="og:locale" content="{{ .Site.LanguageCode | default "en_GB" }}">
     <meta property="og:site_name" content="{{ .Site.Title }}">
     <meta property="og:type" content="{{ if .IsPage }}article{{ else }}website{{ end }}">
     <meta property="og:title" content="{{ if .IsHome }}{{ .Site.Title }} - Football News & Analysis{{ else }}{{ .Title }}{{ end }}">
-    <meta property="og:description" content="{{ if .IsHome }}{{ .Site.Params.description }}{{ else }}{{ .Params.description | default .Summary }}{{ end }}">
+    <meta property="og:description" content="{{ if .IsHome }}{{ .Site.Params.description }}{{ else }}{{ .Params.description | default .Summary | plainify | htmlUnescape }}{{ end }}">
     <meta property="og:url" content="{{ .Permalink }}">
     
     {{ if .Params.featured_image }}
@@ -66,7 +60,7 @@
     <!-- 6. TWITTER CARDS -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ .Title }}">
-    <meta name="twitter:description" content="{{ if .IsHome }}{{ .Site.Params.description }}{{ else }}{{ .Params.description | default .Summary }}{{ end }}">
+    <meta name="twitter:description" content="{{ if .IsHome }}{{ .Site.Params.description }}{{ else }}{{ .Params.description | default .Summary | plainify | htmlUnescape }}{{ end }}">
     {{ if .Params.featured_image }}
     <meta name="twitter:image" content="{{ .Params.featured_image | absURL }}">
     {{ else }}
@@ -74,10 +68,10 @@
     {{ end }}
 
     <!-- =======================================================
-         7. SCHEMA.ORG (RAHASIA GOOGLE MENGENALI BRAND)
+         7. SCHEMA.ORG (JSON-LD)
          ======================================================= -->
     
-    <!-- A. Schema Khusus Homepage (WebSite) -->
+    <!-- A. Homepage Schema -->
     {{ if .IsHome }}
     <script type="application/ld+json">
     {
@@ -99,7 +93,7 @@
     </script>
     {{ end }}
 
-    <!-- B. Schema Khusus Artikel (NewsArticle) -->
+    <!-- B. Article Schema -->
     {{ if .IsPage }}
     <script type="application/ld+json">
     {
@@ -125,7 +119,7 @@
           "url": "{{ "favicon.svg" | absURL }}" 
         }
       },
-      "description": "{{ .Params.description | default .Summary }}"
+      "description": "{{ .Params.description | default .Summary | plainify | htmlUnescape }}"
     }
     </script>
     {{ end }}
