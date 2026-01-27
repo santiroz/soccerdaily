@@ -5,3 +5,5 @@ Pillow
 groq
 oauth2client
 google-api-python-client
+beautifulsoup4
+lxml
