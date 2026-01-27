@@ -3,7 +3,9 @@
     
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-12">
         
-        <!-- KOLOM UTAMA (Artikel) -->
+        <!-- ==========================
+             KOLOM KIRI: ARTIKEL (Lebar 8)
+             ========================== -->
         <article class="lg:col-span-8">
             
             <!-- 1. BREADCRUMB & BADGE -->
@@ -19,21 +21,20 @@
                 </span>
             </div>
 
-            <!-- 2. HEADLINE (H1 SEO) -->
+            <!-- 2. HEADLINE (H1) -->
             <h1 class="font-display font-black text-3xl md:text-5xl lg:text-[3.2rem] text-gray-900 leading-tight mb-6">
                 {{ .Title }}
             </h1>
 
-            <!-- 3. AUTHOR & DATE (E-E-A-T Signal) -->
+            <!-- 3. AUTHOR METADATA -->
             <div class="flex flex-col md:flex-row md:items-center justify-between border-t border-b border-gray-100 py-4 mb-8">
                 <div class="flex items-center gap-3">
-                    <!-- Icon Penulis Profesional -->
                     <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-xl border border-gray-200">
                         ✍️
                     </div>
                     <div class="flex flex-col">
                         <span class="text-xs font-bold text-gray-900 uppercase">
-                            By <span class="text-red-600">{{ .Params.author | default "Soccer Daily Analyst" }}</span>
+                            By <span class="text-red-600">{{ .Params.author | default "glitz Daily Analyst" }}</span>
                         </span>
                         <time class="text-xs text-gray-500 font-medium">
                             Published: {{ .Date.Format "January 2, 2006" }}
@@ -41,7 +42,7 @@
                     </div>
                 </div>
 
-                <!-- Share Icons -->
+                <!-- Share Buttons -->
                 <div class="flex gap-2 mt-3 md:mt-0">
                     <button class="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-black hover:text-white transition">
                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/></svg>
@@ -52,39 +53,33 @@
                 </div>
             </div>
 
-            <!-- 4. MAIN IMAGE (SEO OPTIMIZED) -->
+            <!-- 4. FEATURED IMAGE -->
             {{ if .Params.featured_image }}
             <figure class="mb-10">
-                <!-- MENGGUNAKAN ALT TEXT DARI AI AGAR SEO BAGUS -->
                 <img src="{{ .Params.featured_image }}" 
                      alt="{{ .Params.featured_image_alt | default .Title }}" 
                      class="w-full h-auto object-cover rounded shadow-lg"
                      width="1200" height="675">
                 <figcaption class="text-xs text-gray-500 mt-2 italic text-center">
-                    {{ .Params.featured_image_alt | default "Image via Soccer Daily Analysis" }}
+                    {{ .Params.featured_image_alt | default "Image via glitz Daily Analysis" }}
                 </figcaption>
             </figure>
             {{ end }}
 
-            <!-- 5. ARTICLE CONTENT (DATA TABLE & BLOCKQUOTE STYLING) -->
+            <!-- 5. ARTICLE BODY -->
             <div class="prose prose-lg max-w-none 
                         prose-headings:font-display prose-headings:font-bold prose-headings:text-gray-900
                         prose-p:font-sans prose-p:text-gray-800 prose-p:leading-relaxed
                         prose-a:text-red-600 prose-a:font-bold prose-a:no-underline hover:prose-a:underline
-                        
-                        /* STYLE KHUSUS BLOCKQUOTE (Key Takeaways) */
                         prose-blockquote:bg-gray-50 prose-blockquote:border-l-4 prose-blockquote:border-red-600 
                         prose-blockquote:py-4 prose-blockquote:px-6 prose-blockquote:rounded-r-lg prose-blockquote:not-italic
-                        
-                        /* STYLE KHUSUS TABEL DATA (Agar Profesional) */
                         prose-table:border prose-table:border-gray-200 prose-table:shadow-sm
                         prose-th:bg-gray-100 prose-th:p-4 prose-th:text-gray-700 prose-th:font-black prose-th:uppercase prose-th:text-xs prose-th:tracking-wider
-                        prose-td:p-4 prose-td:border-t prose-td:border-gray-100 prose-td:text-sm
-                        ">
+                        prose-td:p-4 prose-td:border-t prose-td:border-gray-100 prose-td:text-sm">
                 {{ .Content }}
             </div>
 
-            <!-- 6. TAGS -->
+            <!-- 6. TAGS & FOOTER -->
             <div class="mt-12 pt-6 border-t border-gray-200">
                 <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Topics</h4>
                 <div class="flex flex-wrap gap-2">
@@ -98,9 +93,14 @@
 
         </article>
 
-        <!-- SIDEBAR (STICKY) -->
-        <aside class="lg:col-span-4 hidden lg:block">
-            <div class="sticky top-24">
+        <!-- ==========================
+             KOLOM KANAN: SIDEBAR (Lebar 4)
+             ========================== -->
+        <aside class="lg:col-span-4 hidden lg:block h-full">
+            
+            <!-- A. WIDGET BERITA (TIDAK STICKY) -->
+            <!-- Supaya bisa discroll hilang ke atas -->
+            <div class="mb-12">
                 
                 <!-- Sidebar Header -->
                 <div class="flex items-center justify-between mb-6 border-b border-gray-200 pb-2">
@@ -118,25 +118,39 @@
                     
                     {{ range first 5 $related }}
                     <article class="group flex gap-4">
-                        <a href="{{ .Permalink }}" class="shrink-0 w-24 h-24 overflow-hidden rounded-md shadow-sm">
+                        <a href="{{ .Permalink }}" class="shrink-0 w-24 h-24 overflow-hidden rounded-md shadow-sm bg-gray-100 relative">
                             {{ if .Params.featured_image }}
                             <img src="{{ .Params.featured_image }}" class="w-full h-full object-cover transition duration-300 group-hover:scale-110">
+                            {{ else }}
+                            <div class="w-full h-full flex items-center justify-center text-gray-300">No Img</div>
                             {{ end }}
                         </a>
                         <div class="flex flex-col justify-start">
-                            <span class="text-[10px] font-bold text-red-600 uppercase mb-1">
-                                {{ index .Params.categories 0 }}
+                            <span class="text-[10px] font-bold text-red-600 uppercase mb-1 truncate">
+                                {{ index .Params.categories 0 | default "News" }}
                             </span>
-                            <h4 class="font-display font-bold text-sm leading-snug group-hover:text-red-600 transition line-clamp-3">
+                            <h4 class="font-display font-bold text-sm leading-snug text-gray-800 group-hover:text-red-600 transition line-clamp-3">
                                 <a href="{{ .Permalink }}">{{ .Title }}</a>
                             </h4>
                             <span class="text-[10px] text-gray-400 mt-2">{{ .Date.Format "Jan 02" }}</span>
                         </div>
-                    </article>
+                    </article> 
                     {{ end }}
                 </div>
-
             </div>
+
+            <!-- B. WIDGET IKLAN (STICKY!) -->
+            <!-- Hanya bagian ini yang akan diam saat discroll -->
+            <div class="sticky top-24">
+                
+                <!-- Pemisah Visual (Opsional) -->
+                <div class="w-full h-px bg-gray-100 mb-8"></div>
+
+                <!-- Panggil Partial Iklan -->
+                {{ partial "ads/sidebar.html" . }}
+                
+            </div>
+
         </aside>
 
     </div>
