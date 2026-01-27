@@ -20,7 +20,7 @@ try:
     from oauth2client.service_account import ServiceAccountCredentials
     from googleapiclient.discovery import build
 except ImportError:
-    print("⚠️ Google Indexing Libs not found. Install: pip install oauth2client google-api-python-client")
+    pass
 
 # --- CONFIGURATION ---
 GROQ_KEYS_RAW = os.environ.get("GROQ_API_KEY", "")
@@ -34,7 +34,7 @@ if not GROQ_API_KEYS:
     print("❌ FATAL ERROR: Groq API Key is missing!")
     exit(1)
 
-# --- AUTHOR PROFILES (E-E-A-T STRATEGY) ---
+# --- AUTHOR PROFILES ---
 AUTHOR_PROFILES = [
     "Dave Harsya (Senior Analyst)",
     "Sarah Jenkins (Chief Editor)",
@@ -45,7 +45,7 @@ AUTHOR_PROFILES = [
     "Ben Foster (Sports Journalist)"
 ]
 
-# --- CATEGORY RSS FEED ---
+# --- RSS FEEDS ---
 CATEGORY_URLS = {
     "Transfer News": "https://news.google.com/rss/search?q=football+transfer+news+Fabrizio+Romano+here+we+go+when:1d&hl=en-GB&gl=GB&ceid=GB:en",
     "Premier League": "https://news.google.com/rss/search?q=Premier+League+news+match+result+analysis+when:1d&hl=en-GB&gl=GB&ceid=GB:en",
@@ -53,14 +53,13 @@ CATEGORY_URLS = {
     "La Liga": "https://news.google.com/rss/search?q=La+Liga+Real+Madrid+Barcelona+news+when:1d&hl=en-GB&gl=GB&ceid=GB:en"
 }
 
-# --- AUTHORITY SOURCES (OUTBOUND LINKS STRATEGY) ---
+# --- AUTHORITY SOURCES ---
 AUTHORITY_SOURCES = [
     "Transfermarkt", "Sky Sports", "The Athletic", "Opta Analyst",
     "WhoScored", "BBC Sport", "The Guardian", "UEFA Official", "ESPN FC"
 ]
 
-# --- IMAGE DATABASE (STABILITY STRATEGY) ---
-# Menggunakan Unsplash High Quality agar visual bagus dan tidak kena rate limit
+# --- IMAGE DATABASE ---
 SOCCER_IMAGES_DB = [
     "https://images.unsplash.com/photo-1522778119026-d647f0565c6a?auto=format&fit=crop&w=1200&q=80", 
     "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80",
@@ -79,11 +78,14 @@ DATA_DIR = "automation/data"
 MEMORY_FILE = f"{DATA_DIR}/link_memory.json"
 TARGET_PER_CATEGORY = 1 
 
-# --- MEMORY SYSTEM (INTERNAL LINKING STRATEGY) ---
+# --- MEMORY SYSTEM (FIXED SYNTAX) ---
 def load_link_memory():
     if not os.path.exists(MEMORY_FILE): return {}
-    try: with open(MEMORY_FILE, 'r') as f: return json.load(f)
-    except: return {}
+    try:
+        with open(MEMORY_FILE, 'r') as f:
+            return json.load(f)
+    except:
+        return {}
 
 def save_link_to_memory(title, slug):
     os.makedirs(DATA_DIR, exist_ok=True)
@@ -102,7 +104,7 @@ def get_formatted_internal_links():
         formatted_links.append(f"* [{title}]({url})")
     return "\n".join(formatted_links)
 
-# --- RSS & SCRAPER (CONTENT DEPTH STRATEGY) ---
+# --- RSS & SCRAPER ---
 def fetch_rss_feed(url):
     headers = {'User-Agent': 'Mozilla/5.0'}
     try:
@@ -111,10 +113,6 @@ def fetch_rss_feed(url):
     except: return None
 
 def scrape_full_content(url):
-    """
-    Menggunakan Jina Reader agar bisa membaca FULL CONTENT berita.
-    Ini kunci agar artikel tidak 'thin' dan terindeks Google.
-    """
     jina_url = f"https://r.jina.ai/{url}"
     headers = {'User-Agent': 'Mozilla/5.0', 'X-No-Cache': 'true'}
     print(f"      🕵️ Reading via Jina AI: {url[:40]}...")
@@ -122,24 +120,20 @@ def scrape_full_content(url):
         response = requests.get(jina_url, headers=headers, timeout=25)
         if response.status_code == 200:
             text = response.text
-            # Cleaning Data
             clean = re.sub(r'Images:.*', '', text, flags=re.DOTALL)
             clean = re.sub(r'\[.*?\]', '', clean)
             clean = re.sub(r'Title:.*', '', clean)
             clean = clean.strip()
-            if len(clean) > 300: # Pastikan konten cukup panjang
+            if len(clean) > 300:
                 return clean[:8000]
     except: pass
     return None
 
-# --- IMAGE ENGINE (ALT TEXT & STABILITY) ---
+# --- IMAGE ENGINE ---
 def download_and_optimize_image(query, filename):
     if not filename.endswith(".webp"): filename = filename.rsplit(".", 1)[0] + ".webp"
-    
-    # Gunakan Real Photo Database (Lebih SEO friendly & Trustworthy)
     selected_url = random.choice(SOCCER_IMAGES_DB)
     headers = {'User-Agent': 'Mozilla/5.0'}
-
     try:
         response = requests.get(selected_url, headers=headers, timeout=15)
         if response.status_code == 200:
@@ -149,9 +143,9 @@ def download_and_optimize_image(query, filename):
             img.save(output_path, "WEBP", quality=80)
             return f"/images/{filename}"
     except: pass
-    return "/images/default.webp" # Fallback aman
+    return "/images/default.webp"
 
-# --- INDEXING ENGINE (TECHNICAL SEO) ---
+# --- INDEXING ---
 def submit_to_indexnow(url):
     try:
         requests.post("https://api.indexnow.org/indexnow", json={
@@ -172,11 +166,8 @@ def submit_to_google(url):
         print(f"      🚀 Google Indexing Sent: {url}")
     except: pass
 
-# --- AI WRITER (SCHEMA & STRUCTURE) ---
+# --- AI WRITER ---
 def get_groq_article_seo(title, source_text, internal_links_block, category, author_name):
-    # Prompt ini mempertahankan struktur asli Anda (H2 Unik, Bullet Points, Data Table)
-    # Serta memastikan Schema (Image Alt, LSI Keywords) terisi.
-    
     selected_sources = ", ".join(random.sample(AUTHORITY_SOURCES, 3))
     
     system_prompt = f"""
@@ -240,13 +231,11 @@ def main():
             if count >= TARGET_PER_CATEGORY: break
 
             clean_title = entry.title.split(" - ")[0]
-            # Gunakan slug dari judul asli dulu untuk cek duplikasi
             slug = slugify(clean_title, max_length=60, word_boundary=True)
             if os.path.exists(f"{CONTENT_DIR}/{slug}.md"): continue
 
             print(f"   🔥 Processing: {clean_title[:30]}...")
 
-            # 1. SCRAPE FULL CONTENT (Agar tidak 'Thin Content')
             scraped_text = scrape_full_content(entry.link)
             source_data = scraped_text if scraped_text else entry.summary
             
@@ -254,7 +243,6 @@ def main():
                 print("      ❌ Skipped: Content too short.")
                 continue
 
-            # 2. WRITE (Dengan Schema Lengkap)
             current_author = random.choice(AUTHOR_PROFILES)
             links_block = get_formatted_internal_links()
             
@@ -262,24 +250,20 @@ def main():
             if not json_str: continue
 
             try:
-                # Regex robust untuk ekstrak JSON
                 match = re.search(r'\{.*\}', json_str, re.DOTALL)
                 if match: data = json.loads(match.group(0))
                 else: continue
             except: continue
 
-            # Update Slug sesuai judul baru yang SEO Friendly
+            # Update Slug with New Title
             final_slug = slugify(data['title'], max_length=60, word_boundary=True)
             filename = f"{final_slug}.md"
 
-            # 3. IMAGE
             img_path = download_and_optimize_image(data.get('main_keyword', clean_title), f"{final_slug}.webp")
             
-            # 4. SAVE (Frontmatter sesuai Schema Asli Anda)
             date_now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S+00:00")
             tags_str = json.dumps(data.get('lsi_keywords', []))
             
-            # FOOTER KHAS ANDA
             footer = f"\n\n---\n*Source: Analysis by {current_author} based on international reports and [Original Story]({entry.link}).*"
 
             md = f"""---
@@ -301,7 +285,6 @@ draft: false
             with open(f"{CONTENT_DIR}/{filename}", "w", encoding="utf-8") as f: f.write(md)
             save_link_to_memory(data['title'], final_slug)
             
-            # 5. INDEXING
             full_url = f"{WEBSITE_URL}/{final_slug}/"
             submit_to_indexnow(full_url)
             submit_to_google(full_url)
