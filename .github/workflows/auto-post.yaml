@@ -2,7 +2,7 @@ name: Auto Post Soccer News
 
 on:
   schedule:
-    - cron: '0 */6 * * *' # Jalan setiap 6 jam
+    - cron: '15 */6 * * *'  
   workflow_dispatch:      # Bisa dijalankan manual (klik tombol Run)
 
 permissions:
