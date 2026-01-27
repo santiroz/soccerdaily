@@ -9,9 +9,8 @@ import warnings
 from datetime import datetime
 from slugify import slugify
 from io import BytesIO
-from PIL import Image, ImageEnhance, ImageOps
+from PIL import Image, ImageEnhance
 from groq import Groq, RateLimitError
-from bs4 import BeautifulSoup 
 
 # --- SUPPRESS WARNINGS ---
 warnings.filterwarnings("ignore", category=FutureWarning, module="google.api_core")
@@ -34,7 +33,7 @@ if not GROQ_API_KEYS:
 
 # --- AUTHOR PROFILES ---
 AUTHORS = [
-    {"name": "Dave Harsya", "role": "Senior Analyst", "style": "Analytical, data-driven, uses statistics"},
+    {"name": "Dave Harsya", "role": "Senior Analyst", "style": "Analytical, focuses on long-term stats"},
     {"name": "Sarah Jenkins", "role": "Chief Editor", "style": "Professional, formal, straight to the point"},
     {"name": "Luca Romano", "role": "Transfer Specialist", "style": "Excited, uses slang like 'Here we go', energetic"},
     {"name": "Ben Foster", "role": "Sports Journalist", "style": "Opinionated, controversial, critical"},
@@ -49,14 +48,12 @@ CATEGORY_URLS = {
     "La Liga": "https://news.google.com/rss/search?q=La+Liga+Real+Madrid+Barcelona+news+when:1d&hl=en-GB&gl=GB&ceid=GB:en",
 }
 
-# --- AUTHORITY SITES ---
 AUTHORITY_SITES = [
     "https://www.transfermarkt.com", "https://www.skysports.com/football",
     "https://www.bbc.com/sport/football", "https://theathletic.com",
     "https://www.whoscored.com"
 ]
 
-# --- FALLBACK IMAGES ---
 FALLBACK_IMAGES = [
     "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
     "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80"
@@ -71,20 +68,15 @@ TARGET_PER_CATEGORY = 1
 # --- MEMORY SYSTEM ---
 def load_link_memory():
     if not os.path.exists(MEMORY_FILE): return {}
-    try:
-        with open(MEMORY_FILE, 'r') as f:
-            return json.load(f)
-    except:
-        return {}
+    try: with open(MEMORY_FILE, 'r') as f: return json.load(f)
+    except: return {}
 
 def save_link_to_memory(title, slug):
     os.makedirs(DATA_DIR, exist_ok=True)
     memory = load_link_memory()
     memory[title] = f"/{slug}/"
-    if len(memory) > 50:
-        memory = dict(list(memory.items())[-50:])
-    with open(MEMORY_FILE, 'w') as f:
-        json.dump(memory, f, indent=2)
+    if len(memory) > 50: memory = dict(list(memory.items())[-50:])
+    with open(MEMORY_FILE, 'w') as f: json.dump(memory, f, indent=2)
 
 def get_internal_links_list():
     memory = load_link_memory()
@@ -93,156 +85,116 @@ def get_internal_links_list():
     if len(items) > 3: items = random.sample(items, 3)
     return items
 
-# --- RSS FETCHER (INI YANG SEBELUMNYA HILANG) ---
 def fetch_rss_feed(url):
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Referer': 'https://www.google.com/'
-    }
+    headers = {'User-Agent': 'Mozilla/5.0'}
     try:
         response = requests.get(url, headers=headers, timeout=15)
-        if response.status_code != 200: return None
-        return feedparser.parse(response.content)
+        return feedparser.parse(response.content) if response.status_code == 200 else None
     except: return None
 
-# --- SCRAPER ENGINE ---
-def scrape_full_content(url):
+# --- JINA AI SCRAPER (SOLUSI BARU) ---
+def scrape_with_jina(url):
+    """
+    Menggunakan Jina AI untuk membaca konten URL yang diproteksi.
+    """
+    jina_url = f"https://r.jina.ai/{url}"
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
+        'User-Agent': 'Mozilla/5.0',
+        'X-No-Cache': 'true' # Agar dapat berita terbaru
     }
+    
+    print(f"      🕵️ Reading via Jina AI: {url[:40]}...")
     try:
-        print(f"      🕵️ Scraping source...")
-        response = requests.get(url, headers=headers, timeout=10)
-        if response.status_code != 200: return None
-        
-        soup = BeautifulSoup(response.content, 'html.parser')
-        
-        # Bersihkan elemen sampah
-        for element in soup(["script", "style", "nav", "footer", "header", "aside", "form", "iframe", "ads"]):
-            element.decompose()
+        response = requests.get(jina_url, headers=headers, timeout=20)
+        if response.status_code == 200:
+            text = response.text
+            # Bersihkan sedikit metadata Jina
+            clean_text = re.sub(r'Images:.*', '', text, flags=re.DOTALL)
+            clean_text = re.sub(r'\[.*?\]', '', clean_text) # Hapus link markdown
             
-        paragraphs = soup.find_all('p')
-        text_content = " ".join([p.get_text() for p in paragraphs])
-        clean_text = re.sub(r'\s+', ' ', text_content).strip()
-        
-        if len(clean_text) < 300: return None
-        return clean_text[:8000] 
+            if len(clean_text) > 500:
+                print("      ✅ Jina Read Success!")
+                return clean_text[:8000]
     except Exception as e:
-        print(f"      ⚠️ Scraping error: {e}")
-        return None
+        print(f"      ⚠️ Jina Error: {e}")
+    
+    return None
 
 # --- IMAGE ENGINE ---
 def download_and_optimize_image(query, filename):
-    time.sleep(4) # Jeda untuk menghindari rate limit
+    time.sleep(3) 
+    if not filename.endswith(".webp"): filename = filename.rsplit(".", 1)[0] + ".webp"
     
-    if not filename.endswith(".webp"): 
-        filename = filename.rsplit(".", 1)[0] + ".webp"
-
-    base_prompt = f"Professional sports photography of {query}, soccer match action, dynamic angle, stadium lights, 8k, photorealistic, cinematic lighting, sharp focus"
+    base_prompt = f"Professional sports photography of {query}, soccer match action, dynamic angle, stadium lights, 8k"
     safe_prompt = base_prompt.replace(" ", "%20")[:250]
-    
-    print(f"      🎨 Generating HQ Image: {query[:30]}...")
+    print(f"      🎨 Generating Image: {query[:30]}...")
 
-    for attempt in range(3):
+    for attempt in range(2):
         seed = random.randint(1, 999999)
-        image_url = f"https://image.pollinations.ai/prompt/{safe_prompt}?width=1280&height=720&nologo=true&model=flux-realism&seed={seed}&enhance=true"
-        
+        image_url = f"https://image.pollinations.ai/prompt/{safe_prompt}?width=1280&height=720&nologo=true&model=flux&seed={seed}"
         try:
-            response = requests.get(image_url, timeout=45)
-            
+            response = requests.get(image_url, timeout=40)
             if response.status_code == 200 and "image" in response.headers.get("content-type", ""):
                 img = Image.open(BytesIO(response.content)).convert("RGB")
                 img = img.resize((1200, 675), Image.Resampling.LANCZOS)
-                img = ImageEnhance.Sharpness(img).enhance(1.3)
-                img = ImageEnhance.Color(img).enhance(1.1)
-                
+                img = ImageEnhance.Sharpness(img).enhance(1.2)
                 output_path = f"{IMAGE_DIR}/{filename}"
-                img.save(output_path, "WEBP", quality=80, method=6)
-                print(f"      📸 HQ Image Saved")
+                img.save(output_path, "WEBP", quality=80)
                 return f"/images/{filename}" 
-
-        except Exception as e:
-            time.sleep(2)
-    
-    print("      ❌ Using Fallback Image.")
+        except: time.sleep(2)
     return random.choice(FALLBACK_IMAGES)
 
-# --- INDEXING ENGINE ---
+# --- INDEXING ---
 def submit_to_indexnow(url):
     try:
-        endpoint = "https://api.indexnow.org/indexnow"
-        host = WEBSITE_URL.replace("https://", "").replace("http://", "")
-        data = {
-            "host": host,
+        requests.post("https://api.indexnow.org/indexnow", json={
+            "host": WEBSITE_URL.replace("https://", ""),
             "key": INDEXNOW_KEY,
-            "keyLocation": f"https://{host}/{INDEXNOW_KEY}.txt",
+            "keyLocation": f"{WEBSITE_URL}/{INDEXNOW_KEY}.txt",
             "urlList": [url]
-        }
-        requests.post(endpoint, json=data, headers={'Content-Type': 'application/json'})
+        }, headers={'Content-Type': 'application/json'})
         print(f"      🚀 IndexNow Sent: {url}")
-    except Exception as e:
-        print(f"      ⚠️ IndexNow Error: {e}")
+    except: pass
 
 def submit_to_google(url):
-    if not GOOGLE_JSON_KEY: 
-        print("      ⚠️ Google Key missing.")
-        return
+    if not GOOGLE_JSON_KEY: return
     try:
         creds = json.loads(GOOGLE_JSON_KEY)
-        SCOPES = ["https://www.googleapis.com/auth/indexing"]
-        credentials = ServiceAccountCredentials.from_json_keyfile_dict(creds, SCOPES)
-        service = build("indexing", "v3", credentials=credentials)
-        
-        body = {"url": url, "type": "URL_UPDATED"}
-        service.urlNotifications().publish(body=body).execute()
+        service = build("indexing", "v3", credentials=ServiceAccountCredentials.from_json_keyfile_dict(creds, ["https://www.googleapis.com/auth/indexing"]))
+        service.urlNotifications().publish(body={"url": url, "type": "URL_UPDATED"}).execute()
         print(f"      🚀 Google Indexing Sent: {url}")
-    except Exception as e:
-        print(f"      ⚠️ Google Indexing Error: {e}")
+    except: pass
 
-# --- AI WRITER ENGINE ---
+# --- AI WRITER ---
 def get_groq_article_seo(title, source_text, category, author_obj):
-    banned_words = [
-        "delve", "realm", "tapestry", "underscores", "testament", 
-        "poised to", "landscape", "dynamic", "conclusion", 
-        "moreover", "furthermore", "it is worth noting", "unveiled"
-    ]
-    
     system_prompt = f"""
     You are {author_obj['name']}, a {author_obj['role']} for 'Soccer Daily'.
-    YOUR STYLE: {author_obj['style']}.
+    STYLE: {author_obj['style']}.
     
-    GOAL: Rewrite the provided news into a UNIQUE, HUMAN-LIKE article based on the SOURCE MATERIAL.
+    TASK: Write a detailed news article based on the provided text.
     
-    🚨 STRICT HUMANIZATION RULES:
-    1. **NO AI PATTERNS**: Do NOT use these words: {", ".join(banned_words)}.
-    2. **BURSTINESS**: Mix short, punchy sentences with longer descriptive ones. Avoid repetitive sentence structures.
-    3. **OPINIONATED**: Don't just report. Add analysis, rhetorical questions, or emotional context like a real fan or expert.
-    4. **NO PLACEHOLDERS**: Never use brackets like [Name] or [Date]. If info is missing in source, write around it.
-    5. **NO GENERIC INTROS**: Start directly with the action or a strong hook. No "In the world of football..."
+    RULES:
+    1. NO AI WORDS (delve, realm, tapestry).
+    2. OPINIONATED & ANALYTICAL.
+    3. NO PLACEHOLDERS.
     
-    OUTPUT FORMAT (JSON Only):
+    OUTPUT JSON:
     {{
-        "title": "Click-worthy Headline (Max 60 chars)",
-        "description": "Engaging Meta Description (150 chars)",
+        "title": "Headline (Max 60 chars)",
+        "description": "Meta Description (150 chars)",
         "main_keyword": "Main Subject",
-        "lsi_keywords": ["keyword1", "keyword2"],
+        "lsi_keywords": ["keyword1"],
         "content": "Markdown Body"
     }}
     
-    STRUCTURE REQ:
-    - **H2: The Lede** (What happened, written excitingly)
-    - **H2: The Analysis** (Why it matters, apply your specific STYLE)
-    - **H2: Quotes & Context** (Based on source data)
-    - **H2: What's Next**
+    STRUCTURE:
+    - **H2: Breaking News**
+    - **H2: Deep Analysis**
+    - **H2: Reactions**
+    - **H2: Future Outlook**
     """
 
-    user_prompt = f"""
-    TOPIC: {title}
-    RAW DATA: {source_text[:6500]}
-    
-    Write it now using your persona ({author_obj['name']}). Make it undetectable as AI.
-    """
+    user_prompt = f"TOPIC: {title}\nSOURCE TEXT: {source_text[:7500]}\n\nWrite now."
 
     for api_key in GROQ_API_KEYS:
         client = Groq(api_key=api_key)
@@ -250,17 +202,11 @@ def get_groq_article_seo(title, source_text, category, author_obj):
             completion = client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
-                temperature=0.75,
+                temperature=0.7,
                 response_format={"type": "json_object"}
             )
             return completion.choices[0].message.content
-        except RateLimitError:
-            print("      ⚠️ Groq Rate Limit - Switching Key...")
-            continue
-        except Exception as e:
-            print(f"      ⚠️ AI Error: {e}")
-            continue
-            
+        except: continue
     return None
 
 # --- MAIN LOOP ---
@@ -271,12 +217,8 @@ def main():
 
     for category_name, rss_url in CATEGORY_URLS.items():
         print(f"\n📡 Category: {category_name}")
-        # PANGGILAN FUNGSI YANG SEBELUMNYA ERROR
         feed = fetch_rss_feed(rss_url)
-        
-        if not feed or not feed.entries: 
-            print("   ⚠️ No feed found.")
-            continue
+        if not feed or not feed.entries: continue
 
         count = 0
         for entry in feed.entries:
@@ -285,46 +227,40 @@ def main():
             clean_title = entry.title.split(" - ")[0]
             slug = slugify(clean_title, max_length=60, word_boundary=True)
             filename = f"{slug}.md"
-            
             if os.path.exists(f"{CONTENT_DIR}/{filename}"): continue
             
             print(f"   🔥 Processing: {clean_title[:30]}...")
             
-            # 1. SCRAPE
-            scraped_text = scrape_full_content(entry.link)
-            if not scraped_text or len(scraped_text) < 400:
-                print("      ⚠️ Skipped: Content too short/thin.")
-                continue
+            # --- SCRAPE PAKE JINA (NEW) ---
+            # Kita coba ambil full text via Jina
+            scraped_text = scrape_with_jina(entry.link)
             
+            # Kalau Jina gagal, baru pake summary RSS
+            source_data = scraped_text if scraped_text else entry.summary
+            
+            # Kalau masih terlalu pendek (<50 char), skip aja
+            if len(source_data) < 50:
+                print("      ❌ Skipped: Content unreadable.")
+                continue
+
             # 2. WRITE
             selected_author = random.choice(AUTHORS)
-            print(f"      ✍️ Writer: {selected_author['name']} ({selected_author['style']})")
+            json_str = get_groq_article_seo(clean_title, source_data, category_name, selected_author)
             
-            json_str = get_groq_article_seo(clean_title, scraped_text, category_name, selected_author)
             if not json_str: continue
+            try: data = json.loads(json_str)
+            except: continue
+
+            # 3. IMAGE & LINKS
+            img_path = download_and_optimize_image(data.get('main_keyword', clean_title), f"{slug}.webp")
             
-            try: 
-                data = json.loads(json_str)
-            except: 
-                print("      ⚠️ JSON Error. Skipping.")
-                continue
-
-            # 3. IMAGE
-            img_keyword = data.get('main_keyword', clean_title)
-            img_path = download_and_optimize_image(img_keyword, f"{slug}.webp")
-
-            # 4. APPEND LINKS
             internal_links = get_internal_links_list()
-            read_more_block = ""
-            if internal_links:
-                read_more_block = "\n\n### 📖 Read More\n" + "\n".join([f"- [{t}]({u})" for t, u in internal_links])
-            
-            random_auth = random.choice(AUTHORITY_SITES)
-            sources_block = f"\n\n---\n*Sources: Report based on coverage from [Original Article]({entry.link}) and data from [Authority Reference]({random_auth}).*"
+            read_more = "\n\n### 📖 Read More\n" + "\n".join([f"- [{t}]({u})" for t, u in internal_links]) if internal_links else ""
+            sources = f"\n\n---\n*Sources: Analysis based on reports from [Original Story]({entry.link}).*"
 
-            final_content = data['content'] + read_more_block + sources_block
+            final_content = data['content'] + read_more + sources
 
-            # 5. SAVE
+            # 4. SAVE
             date_now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S+00:00")
             md = f"""---
 title: "{data['title']}"
@@ -343,7 +279,6 @@ draft: false
             with open(f"{CONTENT_DIR}/{filename}", "w", encoding="utf-8") as f: f.write(md)
             save_link_to_memory(data['title'], slug)
             
-            # 6. INDEXING
             full_url = f"{WEBSITE_URL}/{slug}/"
             submit_to_indexnow(full_url)
             submit_to_google(full_url)
