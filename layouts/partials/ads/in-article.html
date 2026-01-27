@@ -1,0 +1,38 @@
+<!-- AD SLOT: IN-ARTICLE (High CTR Zone) -->
+<!-- 'my-10' memberikan jarak atas/bawah yang lega agar artikel tidak sesak -->
+<!-- 'clear-both' memastikan iklan tidak bertabrakan dengan gambar yang di-float -->
+<div class="w-full my-10 flex flex-col items-center justify-center clear-both group">
+    
+    <!-- Label Transparan -->
+    <span class="text-[9px] text-gray-400 uppercase tracking-widest mb-2 font-mono group-hover:text-red-600 transition">
+        Sponsored Content
+    </span>
+
+    <!-- Ad Container -->
+    <!-- 
+       LOGIKA PRO:
+       1. w-full : Mengambil lebar penuh area artikel.
+       2. min-h-[280px] : Kita booking tinggi minimal 280px. 
+          Kenapa 280? Agar iklan "Large Rectangle" (336x280) muat sempurna tanpa geser layout.
+       3. bg-gray-50 : Background sangat tipis untuk membedakan area iklan dari teks artikel.
+    -->
+    <div class="w-full min-h-[280px] bg-gray-50 border-y border-gray-100 flex items-center justify-center overflow-hidden">
+        
+        <!-- ============================================= -->
+        <!-- PASTE KODE ADSENSE 'IN-ARTICLE' DISINI -->
+        <!-- ============================================= -->
+        
+        <!-- Saran: Gunakan unit iklan "In-article ads" (Native) dari Google AdSense 
+             karena mereka otomatis menyesuaikan font dengan website Anda. -->
+
+
+        <!-- ⬇️ HAPUS PLACEHOLDER INI JIKA SUDAH PASANG IKLAN ⬇️ -->
+        <div class="flex flex-col items-center justify-center text-gray-300 gap-1 p-8">
+            <svg class="w-10 h-10 mb-2 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+            <span class="font-mono text-xs text-gray-400">Adaptive Ad Slot</span>
+            <span class="text-[10px] bg-white border border-gray-200 px-2 py-0.5 rounded text-gray-400">300x250 / 336x280 / Native</span>
+        </div>
+        <!-- ⬆️ END PLACEHOLDER ⬆️ -->
+
+    </div>
+</div>
