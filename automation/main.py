@@ -32,7 +32,7 @@ if not GROQ_API_KEYS:
     print("❌ FATAL ERROR: Groq API Key is missing!")
     exit(1)
 
-# --- AUTHOR PROFILES (FULL PERSONA) ---
+# --- AUTHOR PROFILES ---
 AUTHORS = [
     {"name": "Dave Harsya", "role": "Senior Analyst", "style": "Analytical, data-driven, uses statistics"},
     {"name": "Sarah Jenkins", "role": "Chief Editor", "style": "Professional, formal, straight to the point"},
@@ -68,11 +68,10 @@ DATA_DIR = "automation/data"
 MEMORY_FILE = f"{DATA_DIR}/link_memory.json"
 TARGET_PER_CATEGORY = 1 
 
-# --- MEMORY SYSTEM (FIXED SYNTAX) ---
+# --- MEMORY SYSTEM ---
 def load_link_memory():
     if not os.path.exists(MEMORY_FILE): return {}
     try:
-        # Perbaikan Syntax Error Baris 72: Dipisah barisnya
         with open(MEMORY_FILE, 'r') as f:
             return json.load(f)
     except:
@@ -94,7 +93,19 @@ def get_internal_links_list():
     if len(items) > 3: items = random.sample(items, 3)
     return items
 
-# --- SCRAPER ENGINE (ROBUST) ---
+# --- RSS FETCHER (INI YANG SEBELUMNYA HILANG) ---
+def fetch_rss_feed(url):
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': 'https://www.google.com/'
+    }
+    try:
+        response = requests.get(url, headers=headers, timeout=15)
+        if response.status_code != 200: return None
+        return feedparser.parse(response.content)
+    except: return None
+
+# --- SCRAPER ENGINE ---
 def scrape_full_content(url):
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -121,49 +132,40 @@ def scrape_full_content(url):
         print(f"      ⚠️ Scraping error: {e}")
         return None
 
-# --- IMAGE ENGINE (FULL FEATURED + RETRY) ---
+# --- IMAGE ENGINE ---
 def download_and_optimize_image(query, filename):
-    # Jeda wajib agar tidak kena Rate Limit Pollinations
-    time.sleep(4) 
+    time.sleep(4) # Jeda untuk menghindari rate limit
     
     if not filename.endswith(".webp"): 
         filename = filename.rsplit(".", 1)[0] + ".webp"
 
-    # Prompt Engineering: Detail Tinggi
     base_prompt = f"Professional sports photography of {query}, soccer match action, dynamic angle, stadium lights, 8k, photorealistic, cinematic lighting, sharp focus"
     safe_prompt = base_prompt.replace(" ", "%20")[:250]
     
     print(f"      🎨 Generating HQ Image: {query[:30]}...")
 
-    # Logika Retry 3x (Dikembalikan)
     for attempt in range(3):
         seed = random.randint(1, 999999)
-        # Gunakan model Flux Realism untuk kualitas terbaik
         image_url = f"https://image.pollinations.ai/prompt/{safe_prompt}?width=1280&height=720&nologo=true&model=flux-realism&seed={seed}&enhance=true"
         
         try:
-            response = requests.get(image_url, timeout=45) # Timeout panjang untuk HQ
+            response = requests.get(image_url, timeout=45)
             
             if response.status_code == 200 and "image" in response.headers.get("content-type", ""):
                 img = Image.open(BytesIO(response.content)).convert("RGB")
-                
-                # Resize 16:9
                 img = img.resize((1200, 675), Image.Resampling.LANCZOS)
-                
-                # Visual Enhancement (Tajam & Cerah)
                 img = ImageEnhance.Sharpness(img).enhance(1.3)
                 img = ImageEnhance.Color(img).enhance(1.1)
                 
                 output_path = f"{IMAGE_DIR}/{filename}"
                 img.save(output_path, "WEBP", quality=80, method=6)
-                print(f"      📸 HQ Image Saved (Attempt {attempt+1})")
+                print(f"      📸 HQ Image Saved")
                 return f"/images/{filename}" 
 
         except Exception as e:
-            print(f"      ⚠️ Image fail (Attempt {attempt+1}): {e}")
-            time.sleep(2) # Jeda sebelum retry
+            time.sleep(2)
     
-    print("      ❌ Image failed after 3 attempts. Using Fallback.")
+    print("      ❌ Using Fallback Image.")
     return random.choice(FALLBACK_IMAGES)
 
 # --- INDEXING ENGINE ---
@@ -198,9 +200,8 @@ def submit_to_google(url):
     except Exception as e:
         print(f"      ⚠️ Google Indexing Error: {e}")
 
-# --- HUMANIZED AI WRITER (FULL PROMPT) ---
+# --- AI WRITER ENGINE ---
 def get_groq_article_seo(title, source_text, category, author_obj):
-    # Kata-kata yang HARAM dipakai (Anti-AI Detector)
     banned_words = [
         "delve", "realm", "tapestry", "underscores", "testament", 
         "poised to", "landscape", "dynamic", "conclusion", 
@@ -249,7 +250,7 @@ def get_groq_article_seo(title, source_text, category, author_obj):
             completion = client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
-                temperature=0.75, # Kreativitas tinggi untuk humanisasi
+                temperature=0.75,
                 response_format={"type": "json_object"}
             )
             return completion.choices[0].message.content
@@ -270,8 +271,12 @@ def main():
 
     for category_name, rss_url in CATEGORY_URLS.items():
         print(f"\n📡 Category: {category_name}")
+        # PANGGILAN FUNGSI YANG SEBELUMNYA ERROR
         feed = fetch_rss_feed(rss_url)
-        if not feed or not feed.entries: continue
+        
+        if not feed or not feed.entries: 
+            print("   ⚠️ No feed found.")
+            continue
 
         count = 0
         for entry in feed.entries:
@@ -285,13 +290,13 @@ def main():
             
             print(f"   🔥 Processing: {clean_title[:30]}...")
             
-            # 1. SCRAPE (Wajib, agar konten tebal)
+            # 1. SCRAPE
             scraped_text = scrape_full_content(entry.link)
             if not scraped_text or len(scraped_text) < 400:
                 print("      ⚠️ Skipped: Content too short/thin.")
                 continue
             
-            # 2. WRITE WITH PERSONA
+            # 2. WRITE
             selected_author = random.choice(AUTHORS)
             print(f"      ✍️ Writer: {selected_author['name']} ({selected_author['style']})")
             
@@ -304,18 +309,16 @@ def main():
                 print("      ⚠️ JSON Error. Skipping.")
                 continue
 
-            # 3. IMAGE GENERATION (HQ)
+            # 3. IMAGE
             img_keyword = data.get('main_keyword', clean_title)
             img_path = download_and_optimize_image(img_keyword, f"{slug}.webp")
 
-            # 4. APPEND LINKS MANUALLY (Agar 100% muncul)
-            # Internal Links
+            # 4. APPEND LINKS
             internal_links = get_internal_links_list()
             read_more_block = ""
             if internal_links:
                 read_more_block = "\n\n### 📖 Read More\n" + "\n".join([f"- [{t}]({u})" for t, u in internal_links])
             
-            # External Links (Authority + Source)
             random_auth = random.choice(AUTHORITY_SITES)
             sources_block = f"\n\n---\n*Sources: Report based on coverage from [Original Article]({entry.link}) and data from [Authority Reference]({random_auth}).*"
 
@@ -332,7 +335,6 @@ tags: {json.dumps(data.get('lsi_keywords', []))}
 featured_image: "{img_path}"
 description: "{data['description']}"
 slug: "{slug}"
-url: "/{slug}/"
 draft: false
 ---
 
@@ -341,14 +343,14 @@ draft: false
             with open(f"{CONTENT_DIR}/{filename}", "w", encoding="utf-8") as f: f.write(md)
             save_link_to_memory(data['title'], slug)
             
-            # 6. INDEXING SUBMISSION
+            # 6. INDEXING
             full_url = f"{WEBSITE_URL}/{slug}/"
             submit_to_indexnow(full_url)
             submit_to_google(full_url)
             
             print(f"   ✅ Published: {slug}")
             count += 1
-            time.sleep(5) # Jeda antar artikel
+            time.sleep(5)
 
 if __name__ == "__main__":
     main()
