@@ -11,6 +11,7 @@ from slugify import slugify
 from io import BytesIO
 from PIL import Image, ImageEnhance
 from groq import Groq, RateLimitError
+from bs4 import BeautifulSoup 
 
 # --- SUPPRESS WARNINGS ---
 warnings.filterwarnings("ignore", category=FutureWarning, module="google.api_core")
@@ -65,18 +66,35 @@ DATA_DIR = "automation/data"
 MEMORY_FILE = f"{DATA_DIR}/link_memory.json"
 TARGET_PER_CATEGORY = 1 
 
-# --- MEMORY SYSTEM ---
+# --- HELPER FUNCTIONS (DEFINED FIRST) ---
+
+def fetch_rss_feed(url):
+    """Mengambil data RSS Feed."""
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    try:
+        response = requests.get(url, headers=headers, timeout=15)
+        if response.status_code == 200:
+            return feedparser.parse(response.content)
+        return None
+    except:
+        return None
+
 def load_link_memory():
     if not os.path.exists(MEMORY_FILE): return {}
-    try: with open(MEMORY_FILE, 'r') as f: return json.load(f)
-    except: return {}
+    try:
+        with open(MEMORY_FILE, 'r') as f:
+            return json.load(f)
+    except:
+        return {}
 
 def save_link_to_memory(title, slug):
     os.makedirs(DATA_DIR, exist_ok=True)
     memory = load_link_memory()
     memory[title] = f"/{slug}/"
-    if len(memory) > 50: memory = dict(list(memory.items())[-50:])
-    with open(MEMORY_FILE, 'w') as f: json.dump(memory, f, indent=2)
+    if len(memory) > 50:
+        memory = dict(list(memory.items())[-50:])
+    with open(MEMORY_FILE, 'w') as f:
+        json.dump(memory, f, indent=2)
 
 def get_internal_links_list():
     memory = load_link_memory()
@@ -85,22 +103,17 @@ def get_internal_links_list():
     if len(items) > 3: items = random.sample(items, 3)
     return items
 
-def fetch_rss_feed(url):
-    headers = {'User-Agent': 'Mozilla/5.0'}
-    try:
-        response = requests.get(url, headers=headers, timeout=15)
-        return feedparser.parse(response.content) if response.status_code == 200 else None
-    except: return None
-
-# --- JINA AI SCRAPER (SOLUSI BARU) ---
+# --- JINA AI SCRAPER (ANDALAN UTAMA) ---
 def scrape_with_jina(url):
     """
-    Menggunakan Jina AI untuk membaca konten URL yang diproteksi.
+    Menggunakan Jina AI untuk membaca konten URL yang diproteksi/susah discrape.
+    Ini mengatasi masalah 'Content too short'.
     """
+    # Menambahkan prefix r.jina.ai agar Jina yang membacanya untuk kita
     jina_url = f"https://r.jina.ai/{url}"
     headers = {
         'User-Agent': 'Mozilla/5.0',
-        'X-No-Cache': 'true' # Agar dapat berita terbaru
+        'X-No-Cache': 'true'
     }
     
     print(f"      🕵️ Reading via Jina AI: {url[:40]}...")
@@ -108,13 +121,15 @@ def scrape_with_jina(url):
         response = requests.get(jina_url, headers=headers, timeout=20)
         if response.status_code == 200:
             text = response.text
-            # Bersihkan sedikit metadata Jina
+            # Bersihkan metadata Jina yang tidak perlu
             clean_text = re.sub(r'Images:.*', '', text, flags=re.DOTALL)
             clean_text = re.sub(r'\[.*?\]', '', clean_text) # Hapus link markdown
+            clean_text = re.sub(r'Title:.*', '', clean_text)
+            clean_text = clean_text.strip()
             
-            if len(clean_text) > 500:
+            if len(clean_text) > 200:
                 print("      ✅ Jina Read Success!")
-                return clean_text[:8000]
+                return clean_text[:8000] # Batasi panjang agar muat di AI
     except Exception as e:
         print(f"      ⚠️ Jina Error: {e}")
     
@@ -122,7 +137,7 @@ def scrape_with_jina(url):
 
 # --- IMAGE ENGINE ---
 def download_and_optimize_image(query, filename):
-    time.sleep(3) 
+    time.sleep(3) # Wajib jeda
     if not filename.endswith(".webp"): filename = filename.rsplit(".", 1)[0] + ".webp"
     
     base_prompt = f"Professional sports photography of {query}, soccer match action, dynamic angle, stadium lights, 8k"
@@ -131,6 +146,7 @@ def download_and_optimize_image(query, filename):
 
     for attempt in range(2):
         seed = random.randint(1, 999999)
+        # Menggunakan model 'flux' (lebih stabil daripada realism untuk batch processing)
         image_url = f"https://image.pollinations.ai/prompt/{safe_prompt}?width=1280&height=720&nologo=true&model=flux&seed={seed}"
         try:
             response = requests.get(image_url, timeout=40)
@@ -138,10 +154,13 @@ def download_and_optimize_image(query, filename):
                 img = Image.open(BytesIO(response.content)).convert("RGB")
                 img = img.resize((1200, 675), Image.Resampling.LANCZOS)
                 img = ImageEnhance.Sharpness(img).enhance(1.2)
+                
                 output_path = f"{IMAGE_DIR}/{filename}"
                 img.save(output_path, "WEBP", quality=80)
                 return f"/images/{filename}" 
-        except: time.sleep(2)
+        except: 
+            time.sleep(2)
+            
     return random.choice(FALLBACK_IMAGES)
 
 # --- INDEXING ---
@@ -167,6 +186,7 @@ def submit_to_google(url):
 
 # --- AI WRITER ---
 def get_groq_article_seo(title, source_text, category, author_obj):
+    # Prompt System
     system_prompt = f"""
     You are {author_obj['name']}, a {author_obj['role']} for 'Soccer Daily'.
     STYLE: {author_obj['style']}.
@@ -174,16 +194,17 @@ def get_groq_article_seo(title, source_text, category, author_obj):
     TASK: Write a detailed news article based on the provided text.
     
     RULES:
-    1. NO AI WORDS (delve, realm, tapestry).
+    1. NO AI WORDS (delve, realm, tapestry, underscores).
     2. OPINIONATED & ANALYTICAL.
     3. NO PLACEHOLDERS.
+    4. NO GENERIC INTROS.
     
     OUTPUT JSON:
     {{
         "title": "Headline (Max 60 chars)",
         "description": "Meta Description (150 chars)",
         "main_keyword": "Main Subject",
-        "lsi_keywords": ["keyword1"],
+        "lsi_keywords": ["keyword1", "keyword2"],
         "content": "Markdown Body"
     }}
     
@@ -206,7 +227,12 @@ def get_groq_article_seo(title, source_text, category, author_obj):
                 response_format={"type": "json_object"}
             )
             return completion.choices[0].message.content
-        except: continue
+        except RateLimitError:
+            print("      ⚠️ Rate Limit hit. Trying next key...")
+            continue
+        except Exception as e:
+            print(f"      ⚠️ AI Error: {e}")
+            continue
     return None
 
 # --- MAIN LOOP ---
@@ -217,8 +243,13 @@ def main():
 
     for category_name, rss_url in CATEGORY_URLS.items():
         print(f"\n📡 Category: {category_name}")
+        
+        # Panggil fungsi fetch_rss_feed (sekarang sudah pasti ada)
         feed = fetch_rss_feed(rss_url)
-        if not feed or not feed.entries: continue
+        
+        if not feed or not feed.entries: 
+            print("   ⚠️ Feed empty or failed.")
+            continue
 
         count = 0
         for entry in feed.entries:
@@ -227,20 +258,20 @@ def main():
             clean_title = entry.title.split(" - ")[0]
             slug = slugify(clean_title, max_length=60, word_boundary=True)
             filename = f"{slug}.md"
+            
             if os.path.exists(f"{CONTENT_DIR}/{filename}"): continue
             
             print(f"   🔥 Processing: {clean_title[:30]}...")
             
-            # --- SCRAPE PAKE JINA (NEW) ---
-            # Kita coba ambil full text via Jina
+            # 1. SCRAPE PAKE JINA (Solusi Anti-Gagal)
             scraped_text = scrape_with_jina(entry.link)
             
-            # Kalau Jina gagal, baru pake summary RSS
+            # Gunakan hasil scrape Jina. Jika gagal, fallback ke summary RSS.
             source_data = scraped_text if scraped_text else entry.summary
             
-            # Kalau masih terlalu pendek (<50 char), skip aja
+            # Cek panjang konten. Jika < 50 karakter, berarti benar-benar kosong -> Skip
             if len(source_data) < 50:
-                print("      ❌ Skipped: Content unreadable.")
+                print("      ❌ Skipped: Content unreadable/too short.")
                 continue
 
             # 2. WRITE
@@ -248,19 +279,27 @@ def main():
             json_str = get_groq_article_seo(clean_title, source_data, category_name, selected_author)
             
             if not json_str: continue
-            try: data = json.loads(json_str)
-            except: continue
+            
+            try: 
+                data = json.loads(json_str)
+            except: 
+                print("      ⚠️ JSON Parse Error.")
+                continue
 
-            # 3. IMAGE & LINKS
+            # 3. IMAGE
             img_path = download_and_optimize_image(data.get('main_keyword', clean_title), f"{slug}.webp")
             
+            # 4. LINKS (Manual Append)
             internal_links = get_internal_links_list()
-            read_more = "\n\n### 📖 Read More\n" + "\n".join([f"- [{t}]({u})" for t, u in internal_links]) if internal_links else ""
+            read_more = ""
+            if internal_links:
+                read_more = "\n\n### 📖 Read More\n" + "\n".join([f"- [{t}]({u})" for t, u in internal_links])
+                
             sources = f"\n\n---\n*Sources: Analysis based on reports from [Original Story]({entry.link}).*"
 
             final_content = data['content'] + read_more + sources
 
-            # 4. SAVE
+            # 5. SAVE
             date_now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S+00:00")
             md = f"""---
 title: "{data['title']}"
@@ -279,6 +318,7 @@ draft: false
             with open(f"{CONTENT_DIR}/{filename}", "w", encoding="utf-8") as f: f.write(md)
             save_link_to_memory(data['title'], slug)
             
+            # 6. INDEXING
             full_url = f"{WEBSITE_URL}/{slug}/"
             submit_to_indexnow(full_url)
             submit_to_google(full_url)
