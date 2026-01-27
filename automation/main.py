@@ -11,7 +11,6 @@ from slugify import slugify
 from io import BytesIO
 from PIL import Image, ImageEnhance
 from groq import Groq, RateLimitError
-from bs4 import BeautifulSoup 
 
 # --- SUPPRESS WARNINGS ---
 warnings.filterwarnings("ignore", category=FutureWarning, module="google.api_core")
@@ -49,15 +48,20 @@ CATEGORY_URLS = {
     "La Liga": "https://news.google.com/rss/search?q=La+Liga+Real+Madrid+Barcelona+news+when:1d&hl=en-GB&gl=GB&ceid=GB:en",
 }
 
-AUTHORITY_SITES = [
-    "https://www.transfermarkt.com", "https://www.skysports.com/football",
-    "https://www.bbc.com/sport/football", "https://theathletic.com",
-    "https://www.whoscored.com"
-]
-
-FALLBACK_IMAGES = [
+# --- DATABASE FOTO ASLI (ANTI RATE LIMIT) ---
+# Kita gunakan link langsung ke Unsplash High Quality.
+# Ini menjamin gambar selalu muncul, bagus, dan tidak kena blokir harian.
+SOCCER_IMAGES_DB = [
+    "https://images.unsplash.com/photo-1522778119026-d647f0565c6a?auto=format&fit=crop&w=1200&q=80", 
+    "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?auto=format&fit=crop&w=1200&q=80", 
     "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80"
+    "https://images.unsplash.com/photo-1517466787929-bc90951d0974?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1200&q=80", 
+    "https://images.unsplash.com/photo-1624880357913-a8539238245b?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1560272564-c83b66b1ad12?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1518091043644-c1d4457512c6?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1489944440615-453fc2b6a9a9?auto=format&fit=crop&w=1200&q=80"
 ]
 
 CONTENT_DIR = "content/articles"
@@ -66,35 +70,26 @@ DATA_DIR = "automation/data"
 MEMORY_FILE = f"{DATA_DIR}/link_memory.json"
 TARGET_PER_CATEGORY = 1 
 
-# --- HELPER FUNCTIONS (DEFINED FIRST) ---
+# --- HELPER FUNCTIONS ---
 
 def fetch_rss_feed(url):
-    """Mengambil data RSS Feed."""
     headers = {'User-Agent': 'Mozilla/5.0'}
     try:
         response = requests.get(url, headers=headers, timeout=15)
-        if response.status_code == 200:
-            return feedparser.parse(response.content)
-        return None
-    except:
-        return None
+        return feedparser.parse(response.content) if response.status_code == 200 else None
+    except: return None
 
 def load_link_memory():
     if not os.path.exists(MEMORY_FILE): return {}
-    try:
-        with open(MEMORY_FILE, 'r') as f:
-            return json.load(f)
-    except:
-        return {}
+    try: with open(MEMORY_FILE, 'r') as f: return json.load(f)
+    except: return {}
 
 def save_link_to_memory(title, slug):
     os.makedirs(DATA_DIR, exist_ok=True)
     memory = load_link_memory()
     memory[title] = f"/{slug}/"
-    if len(memory) > 50:
-        memory = dict(list(memory.items())[-50:])
-    with open(MEMORY_FILE, 'w') as f:
-        json.dump(memory, f, indent=2)
+    if len(memory) > 50: memory = dict(list(memory.items())[-50:])
+    with open(MEMORY_FILE, 'w') as f: json.dump(memory, f, indent=2)
 
 def get_internal_links_list():
     memory = load_link_memory()
@@ -103,65 +98,50 @@ def get_internal_links_list():
     if len(items) > 3: items = random.sample(items, 3)
     return items
 
-# --- JINA AI SCRAPER (ANDALAN UTAMA) ---
+# --- JINA AI SCRAPER ---
 def scrape_with_jina(url):
-    """
-    Menggunakan Jina AI untuk membaca konten URL yang diproteksi/susah discrape.
-    Ini mengatasi masalah 'Content too short'.
-    """
-    # Menambahkan prefix r.jina.ai agar Jina yang membacanya untuk kita
     jina_url = f"https://r.jina.ai/{url}"
-    headers = {
-        'User-Agent': 'Mozilla/5.0',
-        'X-No-Cache': 'true'
-    }
-    
+    headers = {'User-Agent': 'Mozilla/5.0', 'X-No-Cache': 'true'}
     print(f"      🕵️ Reading via Jina AI: {url[:40]}...")
     try:
         response = requests.get(jina_url, headers=headers, timeout=20)
         if response.status_code == 200:
             text = response.text
-            # Bersihkan metadata Jina yang tidak perlu
-            clean_text = re.sub(r'Images:.*', '', text, flags=re.DOTALL)
-            clean_text = re.sub(r'\[.*?\]', '', clean_text) # Hapus link markdown
-            clean_text = re.sub(r'Title:.*', '', clean_text)
-            clean_text = clean_text.strip()
-            
-            if len(clean_text) > 200:
+            # Cleanup
+            clean = re.sub(r'Images:.*', '', text, flags=re.DOTALL)
+            clean = re.sub(r'\[.*?\]', '', clean)
+            clean = re.sub(r'Title:.*', '', clean)
+            clean = clean.strip()
+            if len(clean) > 200:
                 print("      ✅ Jina Read Success!")
-                return clean_text[:8000] # Batasi panjang agar muat di AI
+                return clean[:8000]
     except Exception as e:
         print(f"      ⚠️ Jina Error: {e}")
-    
     return None
 
-# --- IMAGE ENGINE ---
+# --- IMAGE ENGINE (FIXED: USE REAL PHOTOS) ---
 def download_and_optimize_image(query, filename):
-    time.sleep(3) # Wajib jeda
+    # Menggunakan gambar asli acak dari Unsplash untuk menghindari Rate Limit AI
     if not filename.endswith(".webp"): filename = filename.rsplit(".", 1)[0] + ".webp"
     
-    base_prompt = f"Professional sports photography of {query}, soccer match action, dynamic angle, stadium lights, 8k"
-    safe_prompt = base_prompt.replace(" ", "%20")[:250]
-    print(f"      🎨 Generating Image: {query[:30]}...")
+    selected_url = random.choice(SOCCER_IMAGES_DB)
+    print(f"      📸 Selecting Real Photo (Anti-Limit) for: {query[:20]}...")
 
-    for attempt in range(2):
-        seed = random.randint(1, 999999)
-        # Menggunakan model 'flux' (lebih stabil daripada realism untuk batch processing)
-        image_url = f"https://image.pollinations.ai/prompt/{safe_prompt}?width=1280&height=720&nologo=true&model=flux&seed={seed}"
-        try:
-            response = requests.get(image_url, timeout=40)
-            if response.status_code == 200 and "image" in response.headers.get("content-type", ""):
-                img = Image.open(BytesIO(response.content)).convert("RGB")
-                img = img.resize((1200, 675), Image.Resampling.LANCZOS)
-                img = ImageEnhance.Sharpness(img).enhance(1.2)
-                
-                output_path = f"{IMAGE_DIR}/{filename}"
-                img.save(output_path, "WEBP", quality=80)
-                return f"/images/{filename}" 
-        except: 
-            time.sleep(2)
-            
-    return random.choice(FALLBACK_IMAGES)
+    try:
+        response = requests.get(selected_url, timeout=15)
+        if response.status_code == 200:
+            img = Image.open(BytesIO(response.content)).convert("RGB")
+            # Resize
+            img = img.resize((1200, 675), Image.Resampling.LANCZOS)
+            # Simpan
+            output_path = f"{IMAGE_DIR}/{filename}"
+            img.save(output_path, "WEBP", quality=80)
+            return f"/images/{filename}"
+    except Exception as e:
+        print(f"      ⚠️ Image Error: {e}")
+    
+    # Super fallback
+    return SOCCER_IMAGES_DB[0]
 
 # --- INDEXING ---
 def submit_to_indexnow(url):
@@ -186,36 +166,27 @@ def submit_to_google(url):
 
 # --- AI WRITER ---
 def get_groq_article_seo(title, source_text, category, author_obj):
-    # Prompt System
     system_prompt = f"""
     You are {author_obj['name']}, a {author_obj['role']} for 'Soccer Daily'.
     STYLE: {author_obj['style']}.
-    
-    TASK: Write a detailed news article based on the provided text.
+    TASK: Write a news article based on the text provided.
     
     RULES:
     1. NO AI WORDS (delve, realm, tapestry, underscores).
     2. OPINIONATED & ANALYTICAL.
     3. NO PLACEHOLDERS.
-    4. NO GENERIC INTROS.
     
-    OUTPUT JSON:
+    OUTPUT JSON FORMAT ONLY:
     {{
         "title": "Headline (Max 60 chars)",
         "description": "Meta Description (150 chars)",
         "main_keyword": "Main Subject",
-        "lsi_keywords": ["keyword1", "keyword2"],
+        "lsi_keywords": ["keyword1"],
         "content": "Markdown Body"
     }}
-    
-    STRUCTURE:
-    - **H2: Breaking News**
-    - **H2: Deep Analysis**
-    - **H2: Reactions**
-    - **H2: Future Outlook**
     """
-
-    user_prompt = f"TOPIC: {title}\nSOURCE TEXT: {source_text[:7500]}\n\nWrite now."
+    
+    user_prompt = f"TOPIC: {title}\nSOURCE: {source_text[:7500]}\n\nRespond with valid JSON only."
 
     for api_key in GROQ_API_KEYS:
         client = Groq(api_key=api_key)
@@ -224,14 +195,14 @@ def get_groq_article_seo(title, source_text, category, author_obj):
                 model="llama-3.3-70b-versatile",
                 messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
                 temperature=0.7,
-                response_format={"type": "json_object"}
+                response_format={"type": "json_object"} 
             )
             return completion.choices[0].message.content
         except RateLimitError:
-            print("      ⚠️ Rate Limit hit. Trying next key...")
+            print("      ⚠️ Groq Rate Limit. Next key...")
             continue
         except Exception as e:
-            print(f"      ⚠️ AI Error: {e}")
+            print(f"      ⚠️ Groq Error: {e}")
             continue
     return None
 
@@ -243,13 +214,8 @@ def main():
 
     for category_name, rss_url in CATEGORY_URLS.items():
         print(f"\n📡 Category: {category_name}")
-        
-        # Panggil fungsi fetch_rss_feed (sekarang sudah pasti ada)
         feed = fetch_rss_feed(rss_url)
-        
-        if not feed or not feed.entries: 
-            print("   ⚠️ Feed empty or failed.")
-            continue
+        if not feed or not feed.entries: continue
 
         count = 0
         for entry in feed.entries:
@@ -258,20 +224,15 @@ def main():
             clean_title = entry.title.split(" - ")[0]
             slug = slugify(clean_title, max_length=60, word_boundary=True)
             filename = f"{slug}.md"
-            
             if os.path.exists(f"{CONTENT_DIR}/{filename}"): continue
             
             print(f"   🔥 Processing: {clean_title[:30]}...")
             
-            # 1. SCRAPE PAKE JINA (Solusi Anti-Gagal)
+            # 1. SCRAPE
             scraped_text = scrape_with_jina(entry.link)
-            
-            # Gunakan hasil scrape Jina. Jika gagal, fallback ke summary RSS.
             source_data = scraped_text if scraped_text else entry.summary
-            
-            # Cek panjang konten. Jika < 50 karakter, berarti benar-benar kosong -> Skip
             if len(source_data) < 50:
-                print("      ❌ Skipped: Content unreadable/too short.")
+                print("      ❌ Skipped: Content too short.")
                 continue
 
             # 2. WRITE
@@ -280,23 +241,22 @@ def main():
             
             if not json_str: continue
             
-            try: 
-                data = json.loads(json_str)
-            except: 
-                print("      ⚠️ JSON Parse Error.")
+            # JSON CLEANER
+            try:
+                clean_json = json_str.replace("```json", "").replace("```", "").strip()
+                data = json.loads(clean_json)
+            except json.JSONDecodeError:
+                print("      ⚠️ JSON Parsing Failed.")
                 continue
 
             # 3. IMAGE
             img_path = download_and_optimize_image(data.get('main_keyword', clean_title), f"{slug}.webp")
             
-            # 4. LINKS (Manual Append)
+            # 4. LINKS
             internal_links = get_internal_links_list()
-            read_more = ""
-            if internal_links:
-                read_more = "\n\n### 📖 Read More\n" + "\n".join([f"- [{t}]({u})" for t, u in internal_links])
-                
+            read_more = "\n\n### 📖 Read More\n" + "\n".join([f"- [{t}]({u})" for t, u in internal_links]) if internal_links else ""
             sources = f"\n\n---\n*Sources: Analysis based on reports from [Original Story]({entry.link}).*"
-
+            
             final_content = data['content'] + read_more + sources
 
             # 5. SAVE
