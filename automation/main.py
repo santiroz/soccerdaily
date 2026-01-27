@@ -16,8 +16,11 @@ from groq import Groq, RateLimitError
 warnings.filterwarnings("ignore", category=FutureWarning, module="google.api_core")
 
 # --- GOOGLE INDEXING LIBS ---
-from oauth2client.service_account import ServiceAccountCredentials
-from googleapiclient.discovery import build
+try:
+    from oauth2client.service_account import ServiceAccountCredentials
+    from googleapiclient.discovery import build
+except ImportError:
+    print("⚠️ Google Indexing libraries not found. Indexing will be skipped.")
 
 # --- CONFIGURATION ---
 GROQ_KEYS_RAW = os.environ.get("GROQ_API_KEY", "")
@@ -49,8 +52,8 @@ CATEGORY_URLS = {
 }
 
 # --- DATABASE FOTO ASLI (ANTI RATE LIMIT) ---
-# Kita gunakan link langsung ke Unsplash High Quality.
-# Ini menjamin gambar selalu muncul, bagus, dan tidak kena blokir harian.
+# Menggunakan foto asli berkualitas tinggi dari Unsplash.
+# Ini solusi permanen untuk masalah "Rate Limit Reached" pixel art.
 SOCCER_IMAGES_DB = [
     "https://images.unsplash.com/photo-1522778119026-d647f0565c6a?auto=format&fit=crop&w=1200&q=80", 
     "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=1200&q=80",
@@ -73,23 +76,35 @@ TARGET_PER_CATEGORY = 1
 # --- HELPER FUNCTIONS ---
 
 def fetch_rss_feed(url):
-    headers = {'User-Agent': 'Mozilla/5.0'}
+    """Mengambil RSS feed dengan header browser agar tidak diblokir Google."""
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
     try:
         response = requests.get(url, headers=headers, timeout=15)
-        return feedparser.parse(response.content) if response.status_code == 200 else None
-    except: return None
+        if response.status_code == 200:
+            return feedparser.parse(response.content)
+        return None
+    except Exception as e:
+        print(f"      ⚠️ RSS Error: {e}")
+        return None
 
 def load_link_memory():
     if not os.path.exists(MEMORY_FILE): return {}
-    try: with open(MEMORY_FILE, 'r') as f: return json.load(f)
-    except: return {}
+    try:
+        with open(MEMORY_FILE, 'r') as f:
+            return json.load(f)
+    except:
+        return {}
 
 def save_link_to_memory(title, slug):
     os.makedirs(DATA_DIR, exist_ok=True)
     memory = load_link_memory()
     memory[title] = f"/{slug}/"
-    if len(memory) > 50: memory = dict(list(memory.items())[-50:])
-    with open(MEMORY_FILE, 'w') as f: json.dump(memory, f, indent=2)
+    if len(memory) > 50: 
+        memory = dict(list(memory.items())[-50:])
+    with open(MEMORY_FILE, 'w') as f: 
+        json.dump(memory, f, indent=2)
 
 def get_internal_links_list():
     memory = load_link_memory()
@@ -98,52 +113,69 @@ def get_internal_links_list():
     if len(items) > 3: items = random.sample(items, 3)
     return items
 
-# --- JINA AI SCRAPER ---
+# --- SCRAPER (JINA READER) ---
 def scrape_with_jina(url):
+    """Menggunakan Jina AI untuk bypass blokir situs berita."""
     jina_url = f"https://r.jina.ai/{url}"
-    headers = {'User-Agent': 'Mozilla/5.0', 'X-No-Cache': 'true'}
+    headers = {
+        'User-Agent': 'Mozilla/5.0', 
+        'X-No-Cache': 'true'
+    }
+    
     print(f"      🕵️ Reading via Jina AI: {url[:40]}...")
     try:
-        response = requests.get(jina_url, headers=headers, timeout=20)
+        response = requests.get(jina_url, headers=headers, timeout=25)
         if response.status_code == 200:
             text = response.text
-            # Cleanup
+            # Bersihkan metadata Jina
             clean = re.sub(r'Images:.*', '', text, flags=re.DOTALL)
             clean = re.sub(r'\[.*?\]', '', clean)
             clean = re.sub(r'Title:.*', '', clean)
             clean = clean.strip()
+            
             if len(clean) > 200:
                 print("      ✅ Jina Read Success!")
-                return clean[:8000]
+                return clean[:8000] # Batas karakter untuk prompt AI
     except Exception as e:
         print(f"      ⚠️ Jina Error: {e}")
     return None
 
-# --- IMAGE ENGINE (FIXED: USE REAL PHOTOS) ---
+# --- IMAGE ENGINE (UNSPLASH FALLBACK) ---
 def download_and_optimize_image(query, filename):
-    # Menggunakan gambar asli acak dari Unsplash untuk menghindari Rate Limit AI
-    if not filename.endswith(".webp"): filename = filename.rsplit(".", 1)[0] + ".webp"
+    """
+    Mengunduh gambar dari Unsplash (Database) untuk menghindari Rate Limit AI.
+    """
+    if not filename.endswith(".webp"): 
+        filename = filename.rsplit(".", 1)[0] + ".webp"
     
+    # Pilih gambar acak dari database
     selected_url = random.choice(SOCCER_IMAGES_DB)
     print(f"      📸 Selecting Real Photo (Anti-Limit) for: {query[:20]}...")
+    
+    # Header wajib agar Unsplash tidak menolak request python
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+    }
 
     try:
-        response = requests.get(selected_url, timeout=15)
+        response = requests.get(selected_url, headers=headers, timeout=20)
         if response.status_code == 200:
             img = Image.open(BytesIO(response.content)).convert("RGB")
-            # Resize
+            # Resize ke standar web (16:9)
             img = img.resize((1200, 675), Image.Resampling.LANCZOS)
+            
             # Simpan
             output_path = f"{IMAGE_DIR}/{filename}"
             img.save(output_path, "WEBP", quality=80)
             return f"/images/{filename}"
     except Exception as e:
-        print(f"      ⚠️ Image Error: {e}")
+        print(f"      ⚠️ Image Download Error: {e}")
     
-    # Super fallback
-    return SOCCER_IMAGES_DB[0]
+    # Jika gagal total, return path salah satu gambar default (jika ada di local)
+    # Atau return string kosong, tapi sebaiknya jangan biarkan kosong.
+    return "/images/default.webp" # Pastikan Anda punya default.webp atau biarkan script lanjut
 
-# --- INDEXING ---
+# --- INDEXING ENGINE ---
 def submit_to_indexnow(url):
     try:
         requests.post("https://api.indexnow.org/indexnow", json={
@@ -162,9 +194,10 @@ def submit_to_google(url):
         service = build("indexing", "v3", credentials=ServiceAccountCredentials.from_json_keyfile_dict(creds, ["https://www.googleapis.com/auth/indexing"]))
         service.urlNotifications().publish(body={"url": url, "type": "URL_UPDATED"}).execute()
         print(f"      🚀 Google Indexing Sent: {url}")
-    except: pass
+    except Exception as e:
+        print(f"      ⚠️ Google Indexing Error: {e}")
 
-# --- AI WRITER ---
+# --- AI WRITER ENGINE ---
 def get_groq_article_seo(title, source_text, category, author_obj):
     system_prompt = f"""
     You are {author_obj['name']}, a {author_obj['role']} for 'Soccer Daily'.
@@ -215,7 +248,10 @@ def main():
     for category_name, rss_url in CATEGORY_URLS.items():
         print(f"\n📡 Category: {category_name}")
         feed = fetch_rss_feed(rss_url)
-        if not feed or not feed.entries: continue
+        
+        if not feed or not feed.entries:
+            print("   ⚠️ RSS Fetch Failed or Empty.")
+            continue
 
         count = 0
         for entry in feed.entries:
@@ -224,6 +260,7 @@ def main():
             clean_title = entry.title.split(" - ")[0]
             slug = slugify(clean_title, max_length=60, word_boundary=True)
             filename = f"{slug}.md"
+            
             if os.path.exists(f"{CONTENT_DIR}/{filename}"): continue
             
             print(f"   🔥 Processing: {clean_title[:30]}...")
@@ -231,6 +268,7 @@ def main():
             # 1. SCRAPE
             scraped_text = scrape_with_jina(entry.link)
             source_data = scraped_text if scraped_text else entry.summary
+            
             if len(source_data) < 50:
                 print("      ❌ Skipped: Content too short.")
                 continue
@@ -241,12 +279,17 @@ def main():
             
             if not json_str: continue
             
-            # JSON CLEANER
+            # JSON CLEANER (ROBUST REGEX METHOD)
             try:
-                clean_json = json_str.replace("```json", "").replace("```", "").strip()
-                data = json.loads(clean_json)
-            except json.JSONDecodeError:
-                print("      ⚠️ JSON Parsing Failed.")
+                # Cari pola {...} untuk memastikan hanya JSON yang diambil
+                match = re.search(r'\{.*\}', json_str, re.DOTALL)
+                if match:
+                    clean_json = match.group(0)
+                    data = json.loads(clean_json)
+                else:
+                    raise ValueError("No JSON object found")
+            except Exception as e:
+                print(f"      ⚠️ JSON Parsing Failed: {e}")
                 continue
 
             # 3. IMAGE
@@ -254,7 +297,10 @@ def main():
             
             # 4. LINKS
             internal_links = get_internal_links_list()
-            read_more = "\n\n### 📖 Read More\n" + "\n".join([f"- [{t}]({u})" for t, u in internal_links]) if internal_links else ""
+            read_more = ""
+            if internal_links:
+                read_more = "\n\n### 📖 Read More\n" + "\n".join([f"- [{t}]({u})" for t, u in internal_links])
+            
             sources = f"\n\n---\n*Sources: Analysis based on reports from [Original Story]({entry.link}).*"
             
             final_content = data['content'] + read_more + sources
@@ -270,6 +316,7 @@ tags: {json.dumps(data.get('lsi_keywords', []))}
 featured_image: "{img_path}"
 description: "{data['description']}"
 slug: "{slug}"
+url: "/{slug}/"
 draft: false
 ---
 
