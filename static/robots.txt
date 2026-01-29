@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# Ganti dengan link sitemap Anda yang benar
+Sitemap: https://soccerdaily-alpha.vercel.app/sitemap.xml
